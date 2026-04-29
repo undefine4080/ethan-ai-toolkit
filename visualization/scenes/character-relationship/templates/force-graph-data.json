@@ -1,0 +1,134 @@
+{
+  "title": "《百年孤独》人物关系图谱",
+  "description": "布恩迪亚家族及马孔多主要人物的关系网络",
+  "nodes": [
+    {
+      "id": "jose_arcadio_buendia",
+      "name": "何塞·阿尔卡蒂奥·布恩迪亚",
+      "shortName": "老布恩迪亚",
+      "group": "布恩迪亚家族",
+      "gender": "male",
+      "generation": 1,
+      "description": "布恩迪亚家族创始人，马孔多镇的建立者，沉迷炼金术与科学实验，晚年被家人绑在栗树上。",
+      "importance": 5
+    },
+    {
+      "id": "ursula",
+      "name": "乌尔苏拉·伊瓜兰",
+      "shortName": "乌尔苏拉",
+      "group": "布恩迪亚家族",
+      "gender": "female",
+      "generation": 1,
+      "description": "家族的精神支柱，长寿的女家长，亲眼见证了家族六代人的兴衰。",
+      "importance": 5
+    },
+    {
+      "id": "jose_arcadio_1",
+      "name": "何塞·阿尔卡蒂奥（长子）",
+      "shortName": "阿尔卡蒂奥长子",
+      "group": "布恩迪亚家族",
+      "gender": "male",
+      "generation": 2,
+      "description": "布恩迪亚的大儿子，体型魁梧，跟随吉普赛人流浪，回乡后与丽贝卡结婚。",
+      "importance": 3
+    },
+    {
+      "id": "colonel_aureliano",
+      "name": "奥雷里亚诺·布恩迪亚上校",
+      "shortName": "奥雷里亚诺上校",
+      "group": "布恩迪亚家族",
+      "gender": "male",
+      "generation": 2,
+      "description": "家族第二代核心人物，发动三十二次武装起义，铸造小金鱼，最终孤独终老。",
+      "importance": 5
+    },
+    {
+      "id": "rebeca",
+      "name": "丽贝卡",
+      "shortName": "丽贝卡",
+      "group": "外来者",
+      "gender": "female",
+      "generation": 2,
+      "description": "孤儿，被布恩迪亚家族收养，有吃土的怪癖，后与何塞·阿尔卡蒂奥结婚。",
+      "importance": 3
+    },
+    {
+      "id": "amaranta",
+      "name": "阿玛兰妲",
+      "shortName": "阿玛兰妲",
+      "group": "布恩迪亚家族",
+      "gender": "female",
+      "generation": 2,
+      "description": "布恩迪亚的女儿，终生未婚，因嫉恨丽贝卡而饱受愧疚折磨，以编织寿衣度日。",
+      "importance": 3
+    },
+    {
+      "id": "melquiades",
+      "name": "梅尔加德斯",
+      "shortName": "梅尔加德斯",
+      "group": "吉普赛人",
+      "gender": "male",
+      "generation": 1,
+      "description": "神秘的吉普赛人，带来各种奇异发明，用梵文写下了家族命运的预言手稿。",
+      "importance": 4
+    }
+  ],
+  "links": [
+    {
+      "source": "jose_arcadio_buendia",
+      "target": "ursula",
+      "relation": "夫妻",
+      "type": "marriage",
+      "bidirectional": true
+    },
+    {
+      "source": "jose_arcadio_buendia",
+      "target": "jose_arcadio_1",
+      "relation": "父子",
+      "type": "parent-child",
+      "bidirectional": false
+    },
+    {
+      "source": "jose_arcadio_buendia",
+      "target": "colonel_aureliano",
+      "relation": "父子",
+      "type": "parent-child",
+      "bidirectional": false
+    },
+    {
+      "source": "jose_arcadio_buendia",
+      "target": "amaranta",
+      "relation": "父女",
+      "type": "parent-child",
+      "bidirectional": false
+    },
+    {
+      "source": "jose_arcadio_1",
+      "target": "rebeca",
+      "relation": "夫妻",
+      "type": "marriage",
+      "bidirectional": true
+    },
+    {
+      "source": "amaranta",
+      "target": "rebeca",
+      "relation": "嫉恨",
+      "type": "enemy",
+      "bidirectional": false
+    },
+    {
+      "source": "jose_arcadio_buendia",
+      "target": "melquiades",
+      "relation": "忘年之交",
+      "type": "friend",
+      "bidirectional": true
+    },
+    {
+      "source": "ursula",
+      "target": "rebeca",
+      "relation": "养母女",
+      "type": "other",
+      "bidirectional": false
+    }
+  ]
+}

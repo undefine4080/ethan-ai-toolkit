@@ -1,0 +1,61 @@
+{
+  "title": "《百年孤独》布恩迪亚家族传承图",
+  "description": "布恩迪亚家族六代传承关系（节选）",
+  "root": {
+    "id": "jose_arcadio_buendia",
+    "name": "何塞·阿尔卡蒂奥·布恩迪亚",
+    "shortName": "老布恩迪亚",
+    "gender": "male",
+    "spouse": "乌尔苏拉·伊瓜兰",
+    "born": "约1820年",
+    "died": "约1880年",
+    "description": "布恩迪亚家族创始人，马孔多镇的建立者",
+    "children": [
+      {
+        "id": "jose_arcadio_1",
+        "name": "何塞·阿尔卡蒂奥（长子）",
+        "shortName": "长子",
+        "gender": "male",
+        "spouse": "丽贝卡",
+        "born": "约1840年",
+        "died": "约1870年",
+        "description": "体型魁梧，跟随吉普赛人流浪，回乡后与丽贝卡成婚，被神秘枪杀",
+        "children": []
+      },
+      {
+        "id": "colonel_aureliano",
+        "name": "奥雷里亚诺·布恩迪亚上校",
+        "shortName": "奥雷里亚诺上校",
+        "gender": "male",
+        "spouse": "雷梅黛丝·莫斯科特（早逝）",
+        "born": "约1842年",
+        "died": "约1920年",
+        "description": "发动三十二次武装起义，铸造小金鱼，晚年孤独度日",
+        "children": [
+          {
+            "id": "aureliano_jose",
+            "name": "奥雷里亚诺·何塞",
+            "shortName": "奥雷里亚诺·何塞",
+            "gender": "male",
+            "spouse": null,
+            "born": "约1860年",
+            "died": "约1885年",
+            "description": "上校与皮拉·特内拉之子，对姑姑阿玛兰妲有不伦之情",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "amaranta",
+        "name": "阿玛兰妲",
+        "shortName": "阿玛兰妲",
+        "gender": "female",
+        "spouse": null,
+        "born": "约1845年",
+        "died": "约1915年",
+        "description": "终生未婚，以编织寿衣为生，预见自己的死亡",
+        "children": []
+      }
+    ]
+  }
+}
