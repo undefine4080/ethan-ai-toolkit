@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Loop 执行引擎 — 交互式模拟</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --text-dim: #8b949e;
+  --text-bright: #f0f6fc;
+  --blue: #58a6ff;
+  --green: #7ee787;
+  --orange: #d29922;
+  --purple: #bc8cff;
+  --red: #f85149;
+  --cyan: #39d2c0;
+  --pink: #f778ba;
+  --radius: 8px;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  padding: 16px 24px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 20px; color: var(--text-bright); font-weight: 600; }
+.header .scenario {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  display: flex; align-items: center; gap: 8px;
+}
+.header .scenario .badge {
+  background: #1f6feb33; color: var(--blue); border: 1px solid #1f6feb44;
+  padding: 2px 8px; border-radius: 12px; font-size: 12px;
+}
+
+/* Main grid */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  overflow: hidden;
+}
+.main > * { background: var(--bg); overflow-y: auto; }
+
+/* Loop state panel */
+.loop-panel { padding: 16px; }
+.loop-panel h3 { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+.loop-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+  position: relative;
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+.loop-box.outer { border-color: #8b5cf666; }
+.loop-box.inner { margin-left: 16px; border-color: #6366f166; }
+.loop-box.active { border-color: var(--blue); box-shadow: 0 0 12px #58a6ff22; }
+
+.loop-box .loop-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.loop-box.outer .loop-label { color: #8b5cf6; }
+.loop-box.inner .loop-label { color: #6366f1; }
+
+.phase-list { list-style: none; }
+.phase-list li {
+  font-size: 12px; padding: 4px 8px; margin: 2px 0; border-radius: 4px;
+  color: var(--text-dim); display: flex; align-items: center; gap: 6px;
+  transition: all 0.3s;
+}
+.phase-list li .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.phase-list li.done { color: var(--text); }
+.phase-list li.done .dot { background: var(--green); }
+.phase-list li.current { color: var(--text-bright); background: #58a6ff11; font-weight: 500; }
+.phase-list li.current .dot { background: var(--blue); box-shadow: 0 0 6px var(--blue); animation: pulse 1.5s ease-in-out infinite; }
+.phase-list li.skipped { color: #484f58; text-decoration: line-through; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 4px var(--blue); }
+  50% { box-shadow: 0 0 12px var(--blue), 0 0 20px #58a6ff44; }
+}
+
+/* Message timeline */
+.msg-panel { padding: 16px; }
+.msg-panel h3 { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+.msg-stack { display: flex; flex-direction: column; gap: 8px; }
+
+.msg-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  transition: all 0.4s;
+  position: relative;
+}
+.msg-card.new-msg {
+  border-color: var(--blue);
+  box-shadow: 0 0 16px #58a6ff22;
+  animation: slideIn 0.4s ease-out;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.msg-card .msg-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.msg-card .msg-role {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px;
+}
+.msg-card .msg-role.system { background: #8b949e22; color: #8b949e; }
+.msg-card .msg-role.user { background: #58a6ff22; color: var(--blue); }
+.msg-card .msg-role.assistant { background: #7ee78722; color: var(--green); }
+.msg-card .msg-role.toolResult { background: #d2992222; color: var(--orange); }
+
+.msg-card .msg-new-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 8px;
+  background: #58a6ff22; color: var(--blue); border: 1px solid #58a6ff44;
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+@keyframes fadeInOut {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.msg-card .msg-body { font-size: 13px; line-height: 1.5; color: var(--text); }
+.msg-card .msg-body pre {
+  background: #0d1117; border: 1px solid var(--border); border-radius: 4px;
+  padding: 8px; margin-top: 4px; font-family: var(--font-mono); font-size: 12px;
+  overflow-x: auto; white-space: pre-wrap;
+}
+
+.tool-block {
+  margin-top: 4px; padding: 8px; background: #d2992211; border: 1px solid #d2992233;
+  border-radius: 4px; font-family: var(--font-mono); font-size: 12px;
+}
+.tool-block .tool-name { color: var(--orange); font-weight: 600; }
+.tool-block .tool-args { color: var(--text-dim); margin-top: 2px; }
+
+/* Detail panel */
+.detail-panel { padding: 16px; }
+.detail-panel h3 { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+.step-title { font-size: 16px; font-weight: 600; color: var(--text-bright); margin-bottom: 8px; }
+.step-desc { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 16px; }
+
+.code-ref {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.code-ref .code-file { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.code-ref .code-file span { color: var(--cyan); font-weight: 500; }
+.code-ref pre {
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.5; color: var(--text);
+  overflow-x: auto;
+}
+.code-ref pre .kw { color: #ff7b72; }
+.code-ref pre .fn { color: #d2a8ff; }
+.code-ref pre .str { color: #a5d6ff; }
+.code-ref pre .cm { color: #8b949e; }
+
+.loop-state-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.loop-state-badges .tag {
+  font-size: 11px; padding: 3px 8px; border-radius: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+
+/* Controls */
+.controls {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.controls button {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;
+  transition: all 0.2s; display: flex; align-items: center; gap: 4px;
+}
+.controls button:hover { background: #1f2937; border-color: #58a6ff66; }
+.controls button:active { background: #0d1117; }
+.controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+.controls button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.controls button.primary:hover { background: #388bfd; }
+
+.controls .progress { flex: 1; }
+.controls .progress-bar {
+  height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.controls .progress-fill {
+  height: 100%; background: var(--blue); border-radius: 2px; transition: width 0.3s;
+}
+.controls .step-counter {
+  font-size: 13px; color: var(--text-dim); font-family: var(--font-mono);
+}
+.controls .speed-select {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Empty state */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-dim); font-size: 14px; gap: 8px;
+}
+
+/* 循环变量指示器 */
+.var-indicators {
+  margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.var-row {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 13px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  transition: all 0.4s;
+}
+.var-row .var-name { color: var(--text-dim); }
+.var-row .var-value {
+  font-weight: 700; padding: 2px 8px; border-radius: 3px;
+  font-size: 12px; transition: all 0.3s;
+}
+.var-value.true { background: #7ee78722; color: var(--green); border: 1px solid #7ee78744; }
+.var-value.false { background: #f8514922; color: var(--red); border: 1px solid #f8514944; }
+.var-value.zero { background: #8b949e22; color: var(--text-dim); border: 1px solid #8b949e44; }
+.var-value.number { background: #58a6ff22; color: var(--blue); border: 1px solid #58a6ff44; }
+.var-value.dash { color: var(--text-dim); }
+.var-row .var-explain {
+  font-size: 11px; color: var(--text-dim); margin-left: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* 总结面板 */
+.summary-panel {
+  margin-top: 16px; padding: 14px;
+  background: var(--surface); border: 1px solid #58a6ff33; border-radius: var(--radius);
+}
+.summary-panel h4 {
+  font-size: 13px; color: var(--blue); margin-bottom: 10px;
+}
+.summary-timeline {
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.summary-step {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.summary-step .s-icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600;
+}
+.s-arrow {
+  color: var(--text-dim); font-size: 16px; margin: 0 2px;
+  font-family: var(--font-mono);
+}
+.summary-step .s-label {
+  font-size: 10px; color: var(--text-dim); text-align: center; max-width: 56px;
+  white-space: nowrap;
+}
+.summary-stat {
+  font-size: 12px; color: var(--text); line-height: 1.7;
+}
+.summary-stat b { color: var(--text-bright); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Agent Loop 执行引擎 — 交互式执行模拟</h1>
+  <div class="scenario">
+    <span class="badge">模拟场景</span>
+    用户请求：「Read README.md and tell me what this project is about.」
+  </div>
+</div>
+
+<div class="main">
+  <!-- 左侧：循环状态机 -->
+  <div class="loop-panel" id="loopPanel">
+    <h3>循环状态机</h3>
+    <div class="var-indicators" id="varIndicators">
+      <div class="var-row">
+        <span class="var-name">hasMoreToolCalls</span>
+        <span class="var-value dash" id="varHasMore">—</span>
+        <span class="var-explain">决定内层是否继续</span>
+      </div>
+      <div class="var-row">
+        <span class="var-name">pendingMessages</span>
+        <span class="var-value zero" id="varPending">0</span>
+        <span class="var-explain">待注入的引导消息数</span>
+      </div>
+      <div class="var-row">
+        <span class="var-name">firstTurn</span>
+        <span class="var-value dash" id="varFirstTurn">—</span>
+        <span class="var-explain">是否跳过 turn_start</span>
+      </div>
+    </div>
+    <div class="loop-box outer" id="outerLoopBox">
+      <div class="loop-label">外层循环 while(true)</div>
+      <ul class="phase-list">
+        <li id="phase-outer-body"><span class="dot"></span>内层循环（工具+引导消息处理）</li>
+        <li id="phase-outer-followup"><span class="dot"></span>检查 followUpMessages</li>
+      </ul>
+      <div class="loop-box inner" id="innerLoopBox" style="margin-top:8px;">
+        <div class="loop-label">内层循环 while(hasMore || msgs)</div>
+        <ul class="phase-list">
+          <li id="phase-turn-start"><span class="dot"></span>发射 turn_start</li>
+          <li id="phase-inject"><span class="dot"></span>注入 steering 消息</li>
+          <li id="phase-llm"><span class="dot"></span>LLM 流式调用</li>
+          <li id="phase-check-fatal"><span class="dot"></span>检查致命终止</li>
+          <li id="phase-tools"><span class="dot"></span>检查/执行工具调用</li>
+          <li id="phase-apply"><span class="dot"></span>应用工具结果到 context</li>
+          <li id="phase-turn-end"><span class="dot"></span>发射 turn_end</li>
+          <li id="phase-prepare-next"><span class="dot"></span>prepareNextTurn</li>
+          <li id="phase-should-stop"><span class="dot"></span>shouldStopAfterTurn</li>
+          <li id="phase-steering"><span class="dot"></span>getSteeringMessages</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中间：消息时间线 -->
+  <div class="msg-panel" id="msgPanel">
+    <h3>context.messages 时间线</h3>
+    <div class="msg-stack" id="msgStack"></div>
+  </div>
+
+  <!-- 右侧：步骤详情 + 源码 -->
+  <div class="detail-panel" id="detailPanel">
+    <h3>步骤详情</h3>
+    <div id="stepDetail"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="reset()" title="重置到第 1 步">⟳</button>
+  <button onclick="prevStep()" id="btnPrev" title="上一步">◀</button>
+  <button class="primary" onclick="togglePlay()" id="btnPlay" title="自动播放">▶ 播放</button>
+  <button onclick="nextStep()" id="btnNext" title="下一步">下一步 ▶</button>
+  <div class="progress">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+  <span class="step-counter" id="stepCounter">步骤 0 / 0</span>
+  <select class="speed-select" id="speedSelect" onchange="updateSpeed()">
+    <option value="1500">1x</option>
+    <option value="700" selected>2x</option>
+    <option value="300">4x</option>
+  </select>
+</div>
+
+<script>
+// ============================================================
+// 模拟数据：一次真实 agent 执行中的消息
+// ============================================================
+
+const MSG_SYSTEM = {
+  role: 'system',
+  content: '你是一个专业的编程助手。\n可用工具：read_file、search_code、write_file'
+};
+
+const MSG_USER = {
+  role: 'user',
+  content: 'Please read the README.md file and tell me what this project is about.'
+};
+
+const MSG_ASSISTANT_TOOL = {
+  role: 'assistant',
+  content: [
+    { type: 'text', text: '我来读取 README 文件。' },
+    { type: 'toolCall', id: 'tc_001', name: 'read_file', arguments: { filePath: 'README.md' } }
+  ],
+  stopReason: 'toolCalls'
+};
+
+const MSG_TOOL_RESULT = {
+  role: 'toolResult',
+  toolCallId: 'tc_001',
+  toolName: 'read_file',
+  content: [{ type: 'text', text: '# Pi Agent Framework\n\nA flexible AI agent framework for building intelligent assistants.\n\n## Features\n- Multi-model support (OpenAI, Anthropic, etc.)\n- Streaming responses with real-time token output\n- Extensible tool system with prepare/execute/finalize lifecycle\n- Custom hooks for context transformation and turn control\n\n## Quick Start\n```bash\npnpm install\npnpm dev\n```' }],
+  isError: false
+};
+
+const MSG_ASSISTANT_FINAL = {
+  role: 'assistant',
+  content: [{ type: 'text', text: '这个项目是 **Pi Agent Framework**，一个灵活的 AI Agent 框架。\n\n主要特性：\n- 多模型支持（兼容 OpenAI、Anthropic 等主流 LLM）\n- 流式响应（实时 token 流输出）\n- 可扩展的工具系统（完整的 prepare → execute → finalize 生命周期）\n- 自定义 Hook 机制（context 转换、turn 控制等中间件）\n\n快速启动：pnpm install && pnpm dev' }],
+  stopReason: 'stop'
+};
+
+const MSG_MAP = {
+  system: MSG_SYSTEM,
+  user: MSG_USER,
+  assistant_tool: MSG_ASSISTANT_TOOL,
+  tool_result: MSG_TOOL_RESULT,
+  assistant_final: MSG_ASSISTANT_FINAL
+};
+
+// ============================================================
+// 16 步执行轨迹
+// ============================================================
+
+const steps = [
+  {
+    id: 1,
+    title: '入口：agentLoop() 接收用户消息',
+    desc: '用户消息作为 <code>prompts</code> 参数传入 <code>agentLoop()</code>。函数内部创建 <code>EventStream</code> 用于发射事件，然后异步启动 <code>runAgentLoop()</code>。注意：<code>agentLoop</code> 立即返回 stream 给调用者，实际工作在后台异步执行。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '31-54',
+    codeSnippet: [
+      'export function agentLoop(',
+      '  prompts: AgentMessage[],',
+      '  context: AgentContext,',
+      '  config: AgentLoopConfig,',
+      '  signal?: AbortSignal,',
+      '  streamFn?: StreamFn,',
+      '): EventStream<AgentEvent, AgentMessage[]> {',
+      '  const stream = createAgentStream();',
+      '',
+      '  void runAgentLoop(',
+      '    prompts, context, config,',
+      '    async (event) => { stream.push(event); },',
+      '    signal, streamFn,',
+      '  ).then((messages) => {',
+      '    stream.end(messages);',
+      '  });',
+      '',
+      '  return stream;',
+      '}',
+    ],
+    msgs: ['system'],
+    newIds: [],
+    loopState: { outer: false, inner: false, phase: null },
+    phasesActive: [],
+    phasesDone: [],
+    phasesSkipped: [],
+    innerRound: 0
+  },
+  {
+    id: 2,
+    title: '初始化 context：合并用户消息到 messages 数组',
+    desc: '<code>runAgentLoop</code> 将用户 prompt 合并到 <code>context.messages</code> 末尾——消息数组第一次增长。然后发射 <code>agent_start</code>、<code>turn_start</code> 事件。注意 <code>newMessages</code> 数组被创建，用于追踪本轮新增的消息。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '95-118',
+    codeSnippet: [
+      'async function runAgentLoop(',
+      '  prompts: AgentMessage[],',
+      '  context: AgentContext,',
+      '  config: AgentLoopConfig,',
+      '  emit: AgentEventSink,',
+      '  signal?: AbortSignal,',
+      '  streamFn?: StreamFn,',
+      '): Promise<AgentMessage[]> {',
+      '  const newMessages: AgentMessage[] = [...prompts];',
+      '  const currentContext: AgentContext = {',
+      '    ...context,',
+      '    messages: [...context.messages, ...prompts],',
+      '  };',
+      '',
+      '  await emit({ type: "agent_start" });',
+      '  await emit({ type: "turn_start" });',
+      '  for (const prompt of prompts) {',
+      '    await emit({ type: "message_start", message: prompt });',
+      '    await emit({ type: "message_end", message: prompt });',
+      '  }',
+      '',
+      '  await runLoop(currentContext, newMessages,',
+      '    config, signal, emit, streamFn);',
+      '  return newMessages;',
+      '}',
+    ],
+    msgs: ['system', 'user'],
+    newIds: ['user'],
+    loopState: { outer: false, inner: false, phase: 'entry' },
+    phasesActive: [],
+    phasesDone: [],
+    phasesSkipped: [],
+    innerRound: 0
+  },
+  {
+    id: 3,
+    title: '进入 runLoop：双层循环准备就绪',
+    desc: '进入核心函数 <code>runLoop</code>。初始化 <code>firstTurn=true</code>（首轮不再重复发射 turn_start）、<code>hasMoreToolCalls=true</code>（保证至少进入一次内层循环）。首次调用 <code>getSteeringMessages()</code>（本例返回空）。外层 <code>while(true)</code> 开始。<br><br>下面展示整个 runLoop 的骨架结构。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '155-269',
+    codeSnippet: [
+      'async function runLoop(',
+      '  initialContext: AgentContext,',
+      '  newMessages: AgentMessage[],',
+      '  initialConfig: AgentLoopConfig,',
+      '  signal: AbortSignal | undefined,',
+      '  emit: AgentEventSink,',
+      '  streamFn?: StreamFn,',
+      '): Promise<void> {',
+      '  let currentContext = initialContext;',
+      '  let config = initialConfig;',
+      '  let firstTurn = true;',
+      '  let pendingMessages =',
+      '    (await config.getSteeringMessages?.()) || [];',
+      '',
+      '  while (true) {                    // 外层循环',
+      '    let hasMoreToolCalls = true;',
+      '',
+      '    while (hasMoreToolCalls        // 内层循环',
+      '      || pendingMessages.length > 0) {',
+      '      /* 注入消息、调 LLM、执行工具... */',
+      '    }',
+      '',
+      '    const followUpMessages =',
+      '      (await config.getFollowUpMessages?.()) || [];',
+      '    if (followUpMessages.length > 0) {',
+      '      pendingMessages = followUpMessages;',
+      '      continue;',
+      '    }',
+      '    break;',
+      '  }',
+      '',
+      '  await emit({ type: "agent_end", messages: newMessages });',
+      '}',
+    ],
+    msgs: ['system', 'user'],
+    newIds: [],
+    loopState: { outer: true, inner: false, phase: 'outer-start' },
+    phasesActive: ['phase-outer-body'],
+    phasesDone: [],
+    phasesSkipped: [],
+    innerRound: 1
+  },
+  {
+    id: 4,
+    title: '内层循环 R1：跳过注入，直接调 LLM',
+    desc: '内层循环第一轮开始。<code>pendingMessages</code> 为空（没有 steering 消息），「注入待处理消息」步骤被跳过。直接进入 <code>streamAssistantResponse</code>。此时 context.messages 只有 system 和 user 两条消息。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '174-194',
+    codeSnippet: [
+      'while (hasMoreToolCalls || pendingMessages.length > 0) {',
+      '  if (!firstTurn) {',
+      '    await emit({ type: "turn_start" });',
+      '  } else {',
+      '    firstTurn = false;',
+      '  }',
+      '',
+      '  // 注入 pendingMessages（第一轮为空，跳过）',
+      '  if (pendingMessages.length > 0) {',
+      '    for (const message of pendingMessages) {',
+      '      await emit({ type: "message_start", message });',
+      '      await emit({ type: "message_end", message });',
+      '      currentContext.messages.push(message);',
+      '    }',
+      '    pendingMessages = [];',
+      '  }',
+      '',
+      '  // 进入 LLM 调用',
+      '  const message = await streamAssistantResponse(',
+      '    currentContext, config, signal, emit, streamFn);',
+      '  newMessages.push(message);',
+      '  // ...后续处理...',
+      '}',
+    ],
+    msgs: ['system', 'user'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'llm-call' },
+    phasesActive: ['phase-outer-body', 'phase-llm'],
+    phasesDone: ['phase-turn-start'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 5,
+    title: '消息转型：AgentMessage[] → LLM Message[]',
+    desc: '这是项目内部消息格式到 LLM 消息格式的转换层：<br><br>1. <code>transformContext(messages)</code> — 可选钩子，本例无操作<br>2. <code>convertToLlm(messages)</code> — 将项目内部的 <b>AgentMessage[]</b> 转换为 LLM 能理解的 <b>Message[]</b><br>3. 构建 <code>Context</code>（systemPrompt + messages + tools）<br>4. 解析 API Key，调用 <code>streamFunction</code> 发送请求',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '275-308',
+    codeSnippet: [
+      'async function streamAssistantResponse(',
+      '  context: AgentContext,',
+      '  config: AgentLoopConfig,',
+      '  signal: AbortSignal | undefined,',
+      '  emit: AgentEventSink,',
+      '  streamFn?: StreamFn,',
+      '): Promise<AssistantMessage> {',
+      '  let messages = context.messages;',
+      '  if (config.transformContext) {',
+      '    messages = await config.transformContext(',
+      '      messages, signal);',
+      '  }',
+      '',
+      '  const llmMessages =',
+      '    await config.convertToLlm(messages);',
+      '',
+      '  const llmContext: Context = {',
+      '    systemPrompt: context.systemPrompt,',
+      '    messages: llmMessages,',
+      '    tools: context.tools,',
+      '  };',
+      '',
+      '  const streamFunction = streamFn || streamSimple;',
+      '  const resolvedApiKey =',
+      '    (config.getApiKey',
+      '      ? await config.getApiKey(config.model.provider)',
+      '      : undefined) || config.apiKey;',
+      '',
+      '  const response = await streamFunction(',
+      '    config.model, llmContext, {',
+      '      ...config,',
+      '      apiKey: resolvedApiKey,',
+      '      signal,',
+      '    });',
+      '  // ...处理流式响应...',
+      '}',
+    ],
+    msgs: ['system', 'user'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'llm-transform' },
+    phasesActive: ['phase-outer-body', 'phase-llm'],
+    phasesDone: ['phase-turn-start'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 6,
+    title: 'LLM 返回：模型决定调用工具',
+    desc: 'LLM 分析用户请求后判断：需要读取文件才能回答。返回的 <code>AssistantMessage</code> 包含一个 <code>toolCall</code> 内容块（调用 read_file 读取 README.md）。消息被追加到 <code>context.messages</code>——消息数组第二次增长。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '310-367',
+    codeSnippet: [
+      '  let partialMessage: AssistantMessage | null = null;',
+      '  let addedPartial = false;',
+      '',
+      '  for await (const event of response) {',
+      '    switch (event.type) {',
+      '      case "start":',
+      '        partialMessage = event.partial;',
+      '        context.messages.push(partialMessage);',
+      '        addedPartial = true;',
+      '        await emit({ type: "message_start",',
+      '          message: { ...partialMessage } });',
+      '        break;',
+      '',
+      '      case "text_delta":',
+      '      case "thinking_delta":',
+      '      case "toolcall_delta":',
+      '        if (partialMessage) {',
+      '          partialMessage = event.partial;',
+      '          const idx = context.messages.length - 1;',
+      '          context.messages[idx] = partialMessage;',
+      '          await emit({ type: "message_update",',
+      '            assistantMessageEvent: event,',
+      '            message: { ...partialMessage } });',
+      '        }',
+      '        break;',
+      '',
+      '      case "done": case "error":',
+      '        const finalMessage = await response.result();',
+      '        if (addedPartial) {',
+      '          context.messages[context.messages.length - 1]',
+      '            = finalMessage;',
+      '        } else {',
+      '          context.messages.push(finalMessage);',
+      '        }',
+      '        await emit({ type: "message_end",',
+      '          message: finalMessage });',
+      '        return finalMessage;',
+      '    }',
+      '  }',
+    ],
+    msgs: ['system', 'user', 'assistant_tool'],
+    newIds: ['assistant_tool'],
+    loopState: { outer: true, inner: true, phase: 'llm-result' },
+    phasesActive: ['phase-outer-body', 'phase-check-fatal'],
+    phasesDone: ['phase-turn-start', 'phase-llm'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 7,
+    title: '安全检查 + 提取工具调用列表',
+    desc: '先检查 <code>stopReason</code>——不是 error 也不是 aborted，正常通过。然后从 <code>message.content</code> 数组中过滤出 <code>type === "toolCall"</code> 的内容块，得到一个：read_file。因为 toolCalls 不为空，进入工具执行分支。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '196-216',
+    codeSnippet: [
+      '  if (message.stopReason === "error"',
+      '    || message.stopReason === "aborted") {',
+      '    await emit({ type: "turn_end",',
+      '      message, toolResults: [] });',
+      '    await emit({ type: "agent_end",',
+      '      messages: newMessages });',
+      '    return;',
+      '  }',
+      '',
+      '  const toolCalls = message.content',
+      '    .filter(c => c.type === "toolCall");',
+      '',
+      '  const toolResults: ToolResultMessage[] = [];',
+      '  hasMoreToolCalls = false;',
+      '  if (toolCalls.length > 0) {',
+      '    const batch = await executeToolCalls(',
+      '      currentContext, message, config,',
+      '      signal, emit);',
+      '    toolResults.push(...batch.messages);',
+      '    hasMoreToolCalls = !batch.terminate;',
+      '',
+      '    for (const result of toolResults) {',
+      '      currentContext.messages.push(result);',
+      '      newMessages.push(result);',
+      '    }',
+      '  }',
+    ],
+    msgs: ['system', 'user', 'assistant_tool'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'check-tools' },
+    phasesActive: ['phase-outer-body', 'phase-tools'],
+    phasesDone: ['phase-turn-start', 'phase-llm', 'phase-check-fatal'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 8,
+    title: '执行模式判断：走并行路径',
+    desc: '<code>executeToolCalls</code> 检查执行模式：工具的 executionMode 不是 "sequential"，config.toolExecution 也不是 "sequential" → 选择<b>并行模式</b>。只有单个工具时并行和串行效果相同，但代码路径不同。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '373-388',
+    codeSnippet: [
+      'async function executeToolCalls(',
+      '  currentContext: AgentContext,',
+      '  assistantMessage: AssistantMessage,',
+      '  config: AgentLoopConfig,',
+      '  signal: AbortSignal | undefined,',
+      '  emit: AgentEventSink,',
+      '): Promise<ExecutedToolCallBatch> {',
+      '  const toolCalls = assistantMessage.content',
+      '    .filter(c => c.type === "toolCall");',
+      '  const hasSequential = toolCalls.some(tc =>',
+      '    currentContext.tools',
+      '      ?.find(t => t.name === tc.name)',
+      '      ?.executionMode === "sequential"',
+      '  );',
+      '',
+      '  if (config.toolExecution === "sequential"',
+      '    || hasSequential) {',
+      '    return executeToolCallsSequential(',
+      '      currentContext, assistantMessage,',
+      '      toolCalls, config, signal, emit);',
+      '  }',
+      '  return executeToolCallsParallel(',
+      '    currentContext, assistantMessage,',
+      '    toolCalls, config, signal, emit);',
+      '}',
+    ],
+    msgs: ['system', 'user', 'assistant_tool'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'tool-dispatch' },
+    phasesActive: ['phase-outer-body', 'phase-tools'],
+    phasesDone: ['phase-turn-start', 'phase-llm', 'phase-check-fatal'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 9,
+    title: 'prepareToolCall：查找 → 校验 → Before Hook',
+    desc: '<code>prepareToolCall</code> 三步流水线：<br><br>1. 从 context.tools 中查找 "read_file" 工具定义<br>2. 调用 prepareArguments + validateToolArguments 校验参数 schema<br>3. 调用 <b>beforeToolCall</b> 钩子 — 可拦截执行（返回 {block:true} 则跳过）<br><br>本例参数校验通过，钩子未拦截。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '562-626',
+    codeSnippet: [
+      'async function prepareToolCall(',
+      '  currentContext: AgentContext,',
+      '  assistantMessage: AssistantMessage,',
+      '  toolCall: AgentToolCall,',
+      '  config: AgentLoopConfig,',
+      '  signal: AbortSignal | undefined,',
+      '): Promise<PreparedToolCall | ImmediateToolCallOutcome> {',
+      '  const tool = currentContext.tools',
+      '    ?.find(t => t.name === toolCall.name);',
+      '  if (!tool) {',
+      '    return {',
+      '      kind: "immediate",',
+      '      result: createErrorToolResult(',
+      '        `Tool ${toolCall.name} not found`),',
+      '      isError: true,',
+      '    };',
+      '  }',
+      '',
+      '  try {',
+      '    const prepared =',
+      '      prepareToolCallArguments(tool, toolCall);',
+      '    const validatedArgs =',
+      '      validateToolArguments(tool, prepared);',
+      '',
+      '    if (config.beforeToolCall) {',
+      '      const before = await config.beforeToolCall({',
+      '        assistantMessage, toolCall,',
+      '        args: validatedArgs,',
+      '        context: currentContext,',
+      '      }, signal);',
+      '      if (before?.block) {',
+      '        return { kind: "immediate",',
+      '          result: createErrorToolResult(',
+      '            before.reason || "blocked"),',
+      '          isError: true };',
+      '      }',
+      '    }',
+      '',
+      '    return { kind: "prepared",',
+      '      toolCall, tool, args: validatedArgs };',
+      '  } catch (error) {',
+      '    return { kind: "immediate",',
+      '      result: createErrorToolResult(error.message),',
+      '      isError: true };',
+      '  }',
+      '}',
+    ],
+    msgs: ['system', 'user', 'assistant_tool'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'tool-prepare' },
+    phasesActive: ['phase-outer-body', 'phase-tools'],
+    phasesDone: ['phase-turn-start', 'phase-llm', 'phase-check-fatal'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 10,
+    title: 'tool.execute()：真正运行工具函数',
+    desc: '<code>tool.execute("tc_001", {filePath: "README.md"}, signal, callback)</code> 被调用。工具函数读取 README.md 并返回文件内容。注意第 4 个参数是进度回调——工具可通过 <code>tool_execution_update</code> 事件上报进度。返回 <code>{content, details}</code>。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '628-663',
+    codeSnippet: [
+      'async function executePreparedToolCall(',
+      '  prepared: PreparedToolCall,',
+      '  signal: AbortSignal | undefined,',
+      '  emit: AgentEventSink,',
+      '): Promise<ExecutedToolCallOutcome> {',
+      '  const updateEvents: Promise<void>[] = [];',
+      '',
+      '  try {',
+      '    const result = await prepared.tool.execute(',
+      '      prepared.toolCall.id,',
+      '      prepared.args as never,',
+      '      signal,',
+      '      (partialResult) => {',
+      '        updateEvents.push(Promise.resolve(',
+      '          emit({',
+      '            type: "tool_execution_update",',
+      '            toolCallId: prepared.toolCall.id,',
+      '            toolName: prepared.toolCall.name,',
+      '            args: prepared.toolCall.arguments,',
+      '            partialResult,',
+      '          })',
+      '        ));',
+      '      }',
+      '    );',
+      '    await Promise.all(updateEvents);',
+      '    return { result, isError: false };',
+      '  } catch (error) {',
+      '    await Promise.all(updateEvents);',
+      '    return {',
+      '      result: createErrorToolResult(',
+      '        error instanceof Error',
+      '          ? error.message : String(error)),',
+      '      isError: true,',
+      '    };',
+      '  }',
+      '}',
+    ],
+    msgs: ['system', 'user', 'assistant_tool'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'tool-execute' },
+    phasesActive: ['phase-outer-body', 'phase-tools'],
+    phasesDone: ['phase-turn-start', 'phase-llm', 'phase-check-fatal'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 11,
+    title: '收尾 + 创建 ToolResult 消息',
+    desc: '调用 <code>afterToolCall</code> 钩子（可修改/替换工具结果，本例无修改）。创建 <code>ToolResultMessage</code> 包含完整文件内容。消息追加到 <code>context.messages</code>——消息数组第三次增长。检查 <code>shouldTerminateToolBatch</code>：这个工具没有标记 terminate，所以 <b>hasMoreToolCalls = true</b>，内层循环将继续。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '665-741',
+    codeSnippet: [
+      'async function finalizeExecutedToolCall(',
+      '  currentContext, assistantMessage, prepared,',
+      '  executed, config, signal,',
+      '): Promise<FinalizedToolCallOutcome> {',
+      '  let result = executed.result;',
+      '  let isError = executed.isError;',
+      '',
+      '  if (config.afterToolCall) {',
+      '    try {',
+      '      const after = await config.afterToolCall({',
+      '        assistantMessage,',
+      '        toolCall: prepared.toolCall,',
+      '        args: prepared.args,',
+      '        result, isError, context: currentContext,',
+      '      }, signal);',
+      '      if (after) {',
+      '        result = {',
+      '          content: after.content ?? result.content,',
+      '          details: after.details ?? result.details,',
+      '          terminate: after.terminate ?? result.terminate,',
+      '        };',
+      '        isError = after.isError ?? isError;',
+      '      }',
+      '    } catch (error) {',
+      '      result = createErrorToolResult(error.message);',
+      '      isError = true;',
+      '    }',
+      '  }',
+      '',
+      '  return { toolCall: prepared.toolCall,',
+      '    result, isError };',
+      '}',
+      '',
+      'function createToolResultMessage(',
+      '  finalized: FinalizedToolCallOutcome,',
+      '): ToolResultMessage {',
+      '  return {',
+      '    role: "toolResult",',
+      '    toolCallId: finalized.toolCall.id,',
+      '    toolName: finalized.toolCall.name,',
+      '    content: finalized.result.content,',
+      '    details: finalized.result.details,',
+      '    isError: finalized.isError,',
+      '    timestamp: Date.now(),',
+      '  };',
+      '}',
+    ],
+    msgs: ['system', 'user', 'assistant_tool', 'tool_result'],
+    newIds: ['tool_result'],
+    loopState: { outer: true, inner: true, phase: 'tool-finalize' },
+    phasesActive: ['phase-outer-body', 'phase-apply'],
+    phasesDone: ['phase-turn-start', 'phase-llm', 'phase-check-fatal', 'phase-tools'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 12,
+    title: '内层继续！这是双层循环的关键',
+    desc: '发射 turn_end → prepareNextTurn（无变化）→ shouldStopAfterTurn（返回 false，不终止）→ getSteeringMessages（空）。<br><br>回到内层 while 顶部：<b>hasMoreToolCalls=true</b>（工具没有终止），条件满足，内层循环继续！这是理解的关键：工具执行完后<b>不是结束</b>，而是让 LLM 带着工具结果再跑一轮，生成最终回复。这是 LLM Agent 的「思考→行动→观察→再思考」模式。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '218-254',
+    codeSnippet: [
+      '    await emit({ type: "turn_end",',
+      '      message, toolResults });',
+      '',
+      '    const nextTurn =',
+      '      await config.prepareNextTurn?.({',
+      '        message, toolResults,',
+      '        context: currentContext,',
+      '        newMessages,',
+      '      });',
+      '    if (nextTurn) {',
+      '      currentContext =',
+      '        nextTurn.context ?? currentContext;',
+      '      config = {',
+      '        ...config,',
+      '        model: nextTurn.model ?? config.model,',
+      '        reasoning: nextTurn.thinkingLevel',
+      '          ? newThinkingLevel',
+      '          : config.reasoning,',
+      '      };',
+      '    }',
+      '',
+      '    if (await config.shouldStopAfterTurn?.({',
+      '      message, toolResults,',
+      '      context: currentContext,',
+      '      newMessages,',
+      '    })) {',
+      '      await emit({ type: "agent_end",',
+      '        messages: newMessages });',
+      '      return;',
+      '    }',
+      '',
+      '    pendingMessages =',
+      '      (await config.getSteeringMessages?.())',
+      '      || [];',
+    ],
+    msgs: ['system', 'user', 'assistant_tool', 'tool_result'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'turn-end' },
+    phasesActive: ['phase-outer-body', 'phase-turn-end'],
+    phasesDone: ['phase-turn-start','phase-llm','phase-check-fatal','phase-tools','phase-apply','phase-prepare-next','phase-should-stop','phase-steering'],
+    phasesSkipped: ['phase-inject'],
+    innerRound: 1
+  },
+  {
+    id: 13,
+    title: '内层循环 R2：带着工具结果再次调 LLM',
+    desc: '第二轮内层循环开始。<code>firstTurn</code> 现在是 false，所以会发射 <code>turn_start</code> 事件。<code>pendingMessages</code> 为空，跳过注入，直接进入 LLM 调用。<br><br>关键区别：此时 <code>context.messages</code> 有 4 条消息，包含完整历史（用户请求 + AI 工具调用 + 工具返回的文件内容）。LLM 现在能看到文件内容来生成回答了。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '174-194',
+    codeSnippet: [
+      '// 内层循环第二轮：firstTurn 已是 false',
+      'while (hasMoreToolCalls || pendingMessages.length > 0) {',
+      '  if (!firstTurn) {',
+      '    await emit({ type: "turn_start" });',
+      '  } else {',
+      '    firstTurn = false;',
+      '  }',
+      '',
+      '  if (pendingMessages.length > 0) {',
+      '    for (const message of pendingMessages) {',
+      '      await emit({ type: "message_start",',
+      '        message });',
+      '      await emit({ type: "message_end",',
+      '        message });',
+      '      currentContext.messages.push(message);',
+      '      newMessages.push(message);',
+      '    }',
+      '    pendingMessages = [];',
+      '  }',
+      '',
+      '  // 此时 context.messages 包含 4 条：',
+      '  // system + user + assistant(toolCall) + toolResult',
+      '  const message = await streamAssistantResponse(',
+      '    currentContext, config, signal, emit, streamFn);',
+      '  newMessages.push(message);',
+      '  // ...',
+      '}',
+    ],
+    msgs: ['system', 'user', 'assistant_tool', 'tool_result'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'llm-call' },
+    phasesActive: ['phase-outer-body', 'phase-llm'],
+    phasesDone: ['phase-turn-start', 'phase-inject'],
+    phasesSkipped: [],
+    innerRound: 2
+  },
+  {
+    id: 14,
+    title: 'LLM 返回最终文本回复（不再有工具调用）',
+    desc: 'LLM 分析文件内容后，生成最终回答：「项目是 Pi Agent Framework，特性包括多模型支持、流式响应、可扩展工具系统、自定义 Hook...」。<br><br>这次返回的 AssistantMessage 中<b>没有 toolCall</b>，只有纯文本。消息追加到 context.messages——第四次增长，总数达到 5 条。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '342-367',
+    codeSnippet: [
+      '      case "done":',
+      '      case "error": {',
+      '        const finalMessage =',
+      '          await response.result();',
+      '        if (addedPartial) {',
+      '          const idx =',
+      '            context.messages.length - 1;',
+      '          context.messages[idx] =',
+      '            finalMessage;',
+      '        } else {',
+      '          context.messages.push(',
+      '            finalMessage);',
+      '        }',
+      '        if (!addedPartial) {',
+      '          await emit({',
+      '            type: "message_start",',
+      '            message: { ...finalMessage } });',
+      '        }',
+      '        await emit({ type: "message_end",',
+      '          message: finalMessage });',
+      '        return finalMessage;',
+      '      }',
+    ],
+    msgs: ['system', 'user', 'assistant_tool', 'tool_result', 'assistant_final'],
+    newIds: ['assistant_final'],
+    loopState: { outer: true, inner: true, phase: 'llm-result' },
+    phasesActive: ['phase-outer-body', 'phase-check-fatal'],
+    phasesDone: ['phase-turn-start', 'phase-inject', 'phase-llm'],
+    phasesSkipped: [],
+    innerRound: 2
+  },
+  {
+    id: 15,
+    title: '无工具调用 → 内层循环退出',
+    desc: '检查 stopReason（正常）→ 过滤 toolCalls（空数组，无调用）→ 跳过工具分支，<b>hasMoreToolCalls = false</b>。发射 turn_end，执行所有钩子，getSteeringMessages 返回空。<br><br>回到内层 while 顶部：hasMoreToolCalls=false，pendingMessages=[]。两个条件都不满足——<b>内层循环退出。</b>',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '196-254',
+    codeSnippet: [
+      '  if (message.stopReason === "error"',
+      '    || message.stopReason === "aborted") {',
+      '    await emit({ type: "agent_end",',
+      '      messages: newMessages });',
+      '    return;',
+      '  }',
+      '',
+      '  const toolCalls = message.content',
+      '    .filter(c => c.type === "toolCall");',
+      '',
+      '  const toolResults = [];',
+      '  hasMoreToolCalls = false;',
+      '  if (toolCalls.length > 0) {',
+      '    // 无工具调用，不进入此分支',
+      '  }',
+      '',
+      '  await emit({ type: "turn_end",',
+      '    message, toolResults });',
+      '',
+      '  await config.prepareNextTurn?.(...);',
+      '  await config.shouldStopAfterTurn?.(...);',
+      '  pendingMessages =',
+      '    (await config.getSteeringMessages?.())',
+      '    || [];',
+      '   // hasMoreToolCalls=false',
+      '   // pendingMessages=[]',
+      '   // → 内层循环退出',
+    ],
+    msgs: ['system', 'user', 'assistant_tool', 'tool_result', 'assistant_final'],
+    newIds: [],
+    loopState: { outer: true, inner: true, phase: 'inner-exit' },
+    phasesActive: ['phase-outer-body'],
+    phasesDone: ['phase-turn-start','phase-inject','phase-llm','phase-check-fatal','phase-tools','phase-turn-end','phase-prepare-next','phase-should-stop','phase-steering'],
+    phasesSkipped: ['phase-apply'],
+    innerRound: 2
+  },
+  {
+    id: 16,
+    title: '外层退出 + agent_end：完整流程结束',
+    desc: '内层退出后，来到外层尾部：调用 <code>getFollowUpMessages()</code>，返回空。没有需要处理的跟进消息，<b>break</b> 跳出外层 while(true)。<br><br>发射 <code>agent_end</code> 事件，携带全部新增消息（5 条）。<code>EventStream</code> 结束。<br><br><b style="color:#58a6ff">回顾整个流程：</b> messages 数组从 1 条 → 5 条，经历了 2 轮内层循环。双层循环让 Agent 获得「思考→行动→观察→再思考」的能力。',
+    codeFile: 'packages/agent/src/agent-loop.ts',
+    codeLines: '256-269',
+    codeSnippet: [
+      '    // 内层循环已退出',
+      '',
+      '    const followUpMessages =',
+      '      (await config.getFollowUpMessages?.())',
+      '      || [];',
+      '    if (followUpMessages.length > 0) {',
+      '      pendingMessages = followUpMessages;',
+      '      continue;',
+      '    }',
+      '',
+      '    break;',
+      '',
+      '  // 外层 while(true) 退出',
+      '',
+      '  await emit({',
+      '    type: "agent_end",',
+      '    messages: newMessages,',
+      '  });',
+    ],
+    msgs: ['system', 'user', 'assistant_tool', 'tool_result', 'assistant_final'],
+    newIds: [],
+    loopState: { outer: true, inner: false, phase: 'exit' },
+    phasesActive: ['phase-outer-followup'],
+    phasesDone: ['phase-outer-body'],
+    phasesSkipped: [],
+    innerRound: 2
+  }
+];
+
+// ============================================================
+// 渲染引擎
+// ============================================================
+
+let currentStepIdx = 0;
+let playTimer = null;
+let playSpeed = 700;
+
+// 每步对应的循环控制变量值（与 steps 数组的 index 对应）
+const loopVarValues = [
+  { hasMore: null, pending: null, firstTurn: null },        // 1: 入口
+  { hasMore: null, pending: null, firstTurn: null },        // 2: 初始化
+  { hasMore: true,  pending: 0, firstTurn: true },          // 3: 进入 runLoop
+  { hasMore: true,  pending: 0, firstTurn: false },         // 4: 内层 R1, 跳过注入
+  { hasMore: true,  pending: 0, firstTurn: false },         // 5: 消息转型
+  { hasMore: true,  pending: 0, firstTurn: false },         // 6: LLM 返回 toolCall
+  { hasMore: true,  pending: 0, firstTurn: false },         // 7: 安全检查，进入工具执行
+  { hasMore: true,  pending: 0, firstTurn: false },         // 8: 调度并行
+  { hasMore: true,  pending: 0, firstTurn: false },         // 9: prepareToolCall
+  { hasMore: true,  pending: 0, firstTurn: false },         // 10: execute
+  { hasMore: true,  pending: 0, firstTurn: false },         // 11: finalize + 创建 toolResult
+  { hasMore: true,  pending: 0, firstTurn: false },         // 12: turn_end, 回到内层顶部
+  { hasMore: true,  pending: 0, firstTurn: false },         // 13: 内层 R2, 再调 LLM
+  { hasMore: true,  pending: 0, firstTurn: false },         // 14: LLM 返回最终文本
+  { hasMore: false, pending: 0, firstTurn: false },         // 15: 无工具调用, 内层退出
+  { hasMore: null,  pending: null, firstTurn: null },       // 16: agent_end
+];
+
+function updateSpeed() {
+  playSpeed = parseInt(document.getElementById('speedSelect').value);
+}
+
+const ALL_PHASES = [
+  'phase-turn-start','phase-inject','phase-llm','phase-check-fatal',
+  'phase-tools','phase-apply','phase-turn-end','phase-prepare-next',
+  'phase-should-stop','phase-steering','phase-outer-body','phase-outer-followup'
+];
+
+function render() {
+  const step = steps[currentStepIdx];
+  if (!step) return;
+  renderLoopState(step);
+  renderMessages(step);
+  renderDetail(step);
+  renderControls();
+}
+
+function renderLoopState(step) {
+  ALL_PHASES.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = '';
+  });
+
+  (step.phasesActive || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'current';
+  });
+
+  (step.phasesDone || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'done';
+  });
+
+  (step.phasesSkipped || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'skipped';
+  });
+
+  const outerBox = document.getElementById('outerLoopBox');
+  const innerBox = document.getElementById('innerLoopBox');
+  outerBox.classList.toggle('active', step.loopState.outer);
+  innerBox.classList.toggle('active', step.loopState.inner);
+
+  const innerLabel = innerBox.querySelector('.loop-label');
+  if (step.innerRound > 0) {
+    innerLabel.textContent = `内层循环 while(hasMore || msgs) — 第 ${step.innerRound} 轮`;
+  } else {
+    innerLabel.textContent = '内层循环 while(hasMore || msgs)';
+  }
+
+  // 更新循环变量指示器
+  const vars = loopVarValues[currentStepIdx];
+  updateVarIndicator('varHasMore', vars.hasMore);
+  updateVarIndicator('varPending', vars.pending);
+  updateVarIndicator('varFirstTurn', vars.firstTurn);
+}
+
+function updateVarIndicator(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'var-value';
+  if (value === null || value === undefined) {
+    el.textContent = '—';
+    el.classList.add('dash');
+  } else if (typeof value === 'boolean') {
+    el.textContent = value ? 'true' : 'false';
+    el.classList.add(value ? 'true' : 'false');
+  } else {
+    el.textContent = value;
+    el.classList.add(value === 0 ? 'zero' : 'number');
+  }
+  // 短暂脉冲
+  el.style.transform = 'scale(1.15)';
+  setTimeout(() => { el.style.transform = 'scale(1)'; }, 150);
+}
+
+function renderMessages(step) {
+  const stack = document.getElementById('msgStack');
+  stack.innerHTML = '';
+
+  step.msgs.forEach(key => {
+    const msg = MSG_MAP[key];
+    if (!msg) return;
+    const isNew = (step.newIds || []).includes(key);
+    stack.appendChild(createMessageCard(msg, isNew));
+  });
+
+  document.getElementById('msgPanel').scrollTop = document.getElementById('msgPanel').scrollHeight;
+}
+
+function createMessageCard(msg, isNew) {
+  const card = document.createElement('div');
+  card.className = 'msg-card' + (isNew ? ' new-msg' : '');
+
+  const roleLabel = msg.role === 'toolResult' ? 'toolResult' : msg.role;
+  const emoji = { system: '⚙️', user: '👤', assistant: '🤖', toolResult: '📋' }[msg.role] || '';
+
+  let bodyHtml = '';
+  if (Array.isArray(msg.content)) {
+    msg.content.forEach(block => {
+      if (block.type === 'text') {
+        bodyHtml += `<div style="white-space:pre-wrap;margin-bottom:4px;">${esc(block.text)}</div>`;
+      } else if (block.type === 'toolCall') {
+        bodyHtml += `<div class="tool-block">
+          <div class="tool-name">${esc(block.name)}</div>
+          <div class="tool-args">${esc(JSON.stringify(block.arguments, null, 2))}</div>
+        </div>`;
+      }
+    });
+  } else if (typeof msg.content === 'string') {
+    bodyHtml = `<div style="white-space:pre-wrap;">${esc(msg.content)}</div>`;
+  }
+
+  if (msg.stopReason) {
+    bodyHtml += `<div style="margin-top:6px;font-size:11px;color:var(--text-dim);">stopReason: <span style="color:var(--cyan);">${esc(msg.stopReason)}</span></div>`;
+  }
+  if (msg.toolName) {
+    bodyHtml += `<div style="margin-top:2px;font-size:11px;color:var(--text-dim);">tool: ${esc(msg.toolName)} | isError: ${msg.isError}</div>`;
+  }
+
+  card.innerHTML = `
+    <div class="msg-header">
+      <span class="msg-role ${msg.role}">${emoji} ${roleLabel}</span>
+      ${isNew ? '<span class="msg-new-badge">NEW</span>' : ''}
+    </div>
+    <div class="msg-body">${bodyHtml}</div>
+  `;
+  return card;
+}
+
+function renderDetail(step) {
+  const container = document.getElementById('stepDetail');
+
+  const codeHtml = step.codeSnippet ? `
+    <div class="code-ref">
+      <div class="code-file"><span>${esc(step.codeFile)}</span> :${step.codeLines}</div>
+      <pre>${highlight(step.codeSnippet.join('\n'))}</pre>
+    </div>
+  ` : '';
+
+  const summaryHtml = step.id === 16 ? `
+    <div class="summary-panel">
+      <h4>完整生命周期回顾</h4>
+      <div class="summary-timeline">
+        <div class="summary-step"><div class="s-icon" style="background:#6366f122;color:#6366f1;">1</div><div class="s-label">入口<br/>agentLoop</div></div>
+        <span class="s-arrow">→</span>
+        <div class="summary-step"><div class="s-icon" style="background:#8b5cf622;color:#8b5cf6;">外</div><div class="s-label">外层<br/>while(true)</div></div>
+        <span class="s-arrow">→</span>
+        <div class="summary-step"><div class="s-icon" style="background:#3b82f622;color:#3b82f6;">内1</div><div class="s-label">内层R1<br/>LLM调用</div></div>
+        <span class="s-arrow">→</span>
+        <div class="summary-step"><div class="s-icon" style="background:#f59e0b22;color:#f59e0b;">🔧</div><div class="s-label">工具执行<br/>read_file</div></div>
+        <span class="s-arrow">→</span>
+        <div class="summary-step"><div class="s-icon" style="background:#3b82f622;color:#3b82f6;">内2</div><div class="s-label">内层R2<br/>LLM调用</div></div>
+        <span class="s-arrow">→</span>
+        <div class="summary-step"><div class="s-icon" style="background:#6366f122;color:#6366f1;">✓</div><div class="s-label">出口<br/>agent_end</div></div>
+      </div>
+      <div class="summary-stat">
+        外层循环：<b>1 次迭代</b>（followUpMessages 为空，未重复）<br>
+        内层循环：<b>2 轮</b>（R1: LLM→工具, R2: LLM最终回复）<br>
+        messages 增长：<b>1→5 条</b>（system + user + assistant(tool) + toolResult + assistant(final)）<br>
+        hasMoreToolCalls 主导了内层节奏：true → 进入R2 → false → 退出内层<br>
+        关键双循环洞见：R1 结束后 hasMoreToolCalls=true，内层<b>不退出</b>，带着工具结果再跑一轮 LLM
+      </div>
+    </div>
+  ` : '';
+
+  container.innerHTML = `
+    <div class="step-title">步骤 ${step.id}：${step.title}</div>
+    <div class="step-desc">${step.desc}</div>
+    ${codeHtml}
+    ${summaryHtml}
+    <div class="loop-state-badges">
+      <span class="tag">外层循环：${step.loopState.outer ? '第 1 次迭代中' : (step.loopState.phase === 'exit' ? '已退出' : '未进入')}</span>
+      <span class="tag">内层循环：${step.innerRound > 0 ? '第 ' + step.innerRound + ' 轮' : (step.loopState.phase === 'exit' ? '已退出' : '未进入')}</span>
+      <span class="tag">messages 总数：${step.msgs.length}</span>
+      <span class="tag">本轮新增：${(step.newIds || []).length || 0} 条</span>
+    </div>
+  `;
+}
+
+function renderControls() {
+  const total = steps.length;
+  const cur = currentStepIdx + 1;
+  document.getElementById('stepCounter').textContent = `步骤 ${cur} / ${total}`;
+  document.getElementById('progressFill').style.width = ((cur / total) * 100) + '%';
+  document.getElementById('btnPrev').disabled = currentStepIdx === 0;
+  document.getElementById('btnNext').disabled = currentStepIdx >= total - 1;
+}
+
+function nextStep() {
+  if (currentStepIdx < steps.length - 1) {
+    currentStepIdx++;
+    render();
+  } else {
+    pause();
+  }
+}
+
+function prevStep() {
+  if (currentStepIdx > 0) {
+    currentStepIdx--;
+    render();
+  }
+}
+
+function reset() {
+  pause();
+  currentStepIdx = 0;
+  render();
+}
+
+function togglePlay() {
+  playTimer ? pause() : play();
+}
+
+function play() {
+  if (currentStepIdx >= steps.length - 1) currentStepIdx = 0;
+  document.getElementById('btnPlay').innerHTML = '⏸ 暂停';
+  document.getElementById('btnPlay').classList.remove('primary');
+  scheduleNext();
+}
+
+function pause() {
+  if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+  document.getElementById('btnPlay').innerHTML = '▶ 播放';
+  document.getElementById('btnPlay').classList.add('primary');
+}
+
+function scheduleNext() {
+  if (!playTimer && currentStepIdx < steps.length - 1) {
+    playTimer = setTimeout(() => {
+      playTimer = null;
+      nextStep();
+      if (currentStepIdx < steps.length - 1) scheduleNext();
+      else pause();
+    }, playSpeed);
+  }
+}
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function highlight(code) {
+  return esc(code)
+    .replace(/\b(function|async|await|const|let|var|if|else|return|try|catch|throw|break|continue|while|for|of|in|switch|case|default|new|typeof|true|false|null|undefined|export|import|from|class|extends)\b/g, '<span class="kw">$1</span>')
+    .replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') { e.preventDefault(); nextStep(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep(); }
+  if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); reset(); }
+});
+
+// ============================================================
+// 初始化
+// ============================================================
+
+render();
+</script>
+
+</body>
+</html>
