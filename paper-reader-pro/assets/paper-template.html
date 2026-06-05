@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thinking with Visual Primitives - 中文版</title>
+
+<!-- Google Fonts: Crimson Pro (衬线正文) + Noto Serif SC (中文衬线) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Serif+SC:wght@400;500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<style>
+  /* ===== 亮色主题（默认）— 暖白纸张 ===== */
+  :root {
+    --toc-width: 240px;
+    --notes-width: 300px;
+    --max-content-width: 800px;
+
+    --desk-bg: #e8e0d4;
+    --paper-bg: #faf6f0;
+    --paper-bg-subtle: #f5f0e8;
+    --ink: #2c2c2c;
+    --ink-light: #5c5346;
+    --ink-muted: #8a7e6f;
+    --accent: #8b2500;
+    --accent-light: rgba(139,37,0,0.07);
+    --accent-hover: #a52e00;
+    --rule-color: #d4c9b8;
+    --rule-color-strong: #b8a98e;
+    --toc-bg: rgba(245,240,232,0.85);
+    --note-bg: rgba(245,240,232,0.7);
+    --note-card: #fffdf9;
+    --hover-bg: rgba(139,37,0,0.04);
+    --shadow-paper: 0 1px 3px rgba(60,40,20,0.08), 0 6px 24px rgba(60,40,20,0.05);
+    --shadow-card: 0 1px 3px rgba(60,40,20,0.06);
+    --font-serif: "Crimson Pro", "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+    --font-ui: "Atkinson Hyperlegible", "Noto Serif SC", system-ui, sans-serif;
+    --font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    --radius: 3px;
+  }
+
+  /* ===== 暗色主题 ===== */
+  [data-theme="dark"] {
+    --desk-bg: #1a1714;
+    --paper-bg: #2a2520;
+    --paper-bg-subtle: #322c26;
+    --ink: #d4c9b8;
+    --ink-light: #b8a98e;
+    --ink-muted: #8a7e6f;
+    --accent: #c45a32;
+    --accent-light: rgba(196,90,50,0.12);
+    --accent-hover: #d96b42;
+    --rule-color: #443d35;
+    --rule-color-strong: #5c5346;
+    --toc-bg: rgba(42,37,32,0.92);
+    --note-bg: rgba(42,37,32,0.85);
+    --note-card: #352f28;
+    --hover-bg: rgba(196,90,50,0.08);
+    --shadow-paper: 0 1px 3px rgba(0,0,0,0.2), 0 6px 24px rgba(0,0,0,0.15);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-serif);
+    color: var(--ink);
+    background: var(--desk-bg);
+    line-height: 1.9;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== 纸张纹理叠加 ===== */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.5;
+    mix-blend-mode: multiply;
+    background-image: url("smooth-white-plaster-wall.jpg");
+    background-size: 800px 800px;
+    background-repeat: repeat;
+  }
+
+  /* ===== 顶部标题栏 ===== */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--paper-bg);
+    border-bottom: 1px solid var(--rule-color);
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(60,40,20,0.06);
+    font-family: var(--font-ui);
+  }
+
+  .header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+  }
+
+  .header-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-weight: 700;
+    font-family: var(--font-ui);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .badge-original {
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid rgba(139,37,0,0.15);
+  }
+
+  .badge-annotations {
+    background: rgba(28,90,48,0.07);
+    color: #3d7a4a;
+    border: 1px solid rgba(28,90,48,0.15);
+  }
+  [data-theme="dark"] .badge-annotations { color: #6abf7b; background: rgba(28,90,48,0.12); border-color: rgba(28,90,48,0.2); }
+
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--rule-color);
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--ink-muted);
+    transition: all 0.2s;
+    font-family: var(--font-ui);
+    line-height: 1;
+  }
+  .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+  .mobile-toc-toggle,
+  .mobile-notes-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--rule-color);
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-family: var(--font-ui);
+  }
+
+  /* ===== 三栏布局 ===== */
+  .layout {
+    display: flex;
+    min-height: calc(100vh - 52px);
+    max-width: calc(var(--toc-width) + var(--max-content-width) + var(--notes-width) + 2px);
+    margin: 0 auto;
+  }
+
+  /* ===== 左侧目录 ===== */
+  .sidebar-toc {
+    width: var(--toc-width);
+    flex-shrink: 0;
+    position: sticky;
+    top: 52px;
+    height: calc(100vh - 52px);
+    overflow-y: auto;
+    background: var(--toc-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-right: 1px solid var(--rule-color);
+    padding: 24px 16px;
+    font-family: var(--font-ui);
+  }
+
+  .sidebar-toc h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-muted);
+    margin-bottom: 14px;
+    font-weight: 700;
+    font-family: var(--font-ui);
+  }
+
+  .toc-list { list-style: none; padding: 0; }
+  .toc-list li { margin-bottom: 1px; }
+
+  .toc-list a {
+    display: block;
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--ink-light);
+    font-size: 13px;
+    transition: all 0.15s;
+    line-height: 1.55;
+    font-family: var(--font-ui);
+  }
+
+  .toc-list a:hover { background: var(--hover-bg); color: var(--ink); }
+
+  .toc-list a.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .toc-list .toc-h3 { padding-left: 22px; font-size: 12.5px; }
+
+  /* ===== 中间正文 — 纸张区域 ===== */
+  .content {
+    flex: 1;
+    max-width: var(--max-content-width);
+    padding: 48px 56px 100px;
+    min-width: 0;
+    background: var(--paper-bg);
+    box-shadow: var(--shadow-paper);
+    position: relative;
+  }
+
+  .content::before,
+  .content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--rule-color) 10%, var(--rule-color) 90%, transparent);
+  }
+  .content::before { left: 0; }
+  .content::after { right: 0; }
+
+  .content h1 {
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.3;
+    color: var(--ink);
+    letter-spacing: -0.3px;
+  }
+
+  .content h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 52px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-color-strong);
+    line-height: 1.35;
+    color: var(--ink);
+    letter-spacing: -0.2px;
+  }
+
+  .content h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 36px;
+    margin-bottom: 12px;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  .content h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 28px;
+    margin-bottom: 10px;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  .content p {
+    margin-bottom: 18px;
+    text-align: justify;
+    text-indent: 0;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+
+  .content hr {
+    border: none;
+    height: 1px;
+    background: var(--rule-color);
+    margin: 32px 0;
+  }
+
+  .content ul {
+    margin: 12px 0 18px 20px;
+    padding-left: 0;
+  }
+  .content li { margin-bottom: 6px; }
+  .content li::marker { color: var(--ink-muted); }
+
+  /* 段落锚点标记 */
+  .para-wrapper { position: relative; }
+  .para-wrapper:hover .para-marker { opacity: 1; }
+
+  .para-marker {
+    position: absolute;
+    left: -36px;
+    top: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    user-select: none;
+    padding: 2px 5px;
+    border-radius: var(--radius);
+    font-family: var(--font-ui);
+  }
+  .para-marker:hover { background: var(--accent-light); }
+
+  /* 正文中的注解引用标记 */
+  .note-ref {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--paper-bg);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    vertical-align: super;
+    margin-left: 2px;
+    transition: transform 0.15s, background 0.15s;
+    font-family: var(--font-ui);
+  }
+  .note-ref:hover { transform: scale(1.15); background: var(--accent-hover); }
+
+  /* 图片区域 */
+  .figure-container {
+    margin: 32px 0;
+    text-align: center;
+    background: var(--paper-bg-subtle);
+    border: 1px solid var(--rule-color);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .figure-container img { max-width: 100%; height: auto; }
+
+  .figure-container figcaption {
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: var(--ink-light);
+    text-align: left;
+    line-height: 1.6;
+    font-style: italic;
+  }
+  .figure-container figcaption strong { color: var(--ink); font-style: normal; }
+
+  /* 引用块 */
+  .content blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 10px 18px;
+    margin: 18px 0;
+    color: var(--ink-light);
+    background: var(--accent-light);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-style: italic;
+  }
+  .content blockquote p { margin-bottom: 0; font-style: italic; }
+
+  /* 表格 */
+  .content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 22px 0;
+    font-size: 14px;
+    font-family: var(--font-ui);
+  }
+
+  .content th,
+  .content td {
+    border: 1px solid var(--rule-color);
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .content th {
+    background: var(--paper-bg-subtle);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .content tr:hover td { background: var(--hover-bg); }
+
+  /* 公式 */
+  .katex-display { margin: 22px 0; overflow-x: auto; overflow-y: hidden; }
+  .katex { font-size: 1.1em; }
+
+  /* 代码 */
+  .content pre {
+    background: var(--paper-bg-subtle);
+    border: 1px solid var(--rule-color);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 18px 0;
+    font-family: var(--font-mono);
+  }
+
+  .content code { font-family: var(--font-mono); font-size: 0.88em; }
+
+  .content p code {
+    background: var(--paper-bg-subtle);
+    padding: 1px 5px;
+    border-radius: 2px;
+    border: 1px solid var(--rule-color);
+  }
+
+  /* ===== 右侧注解 ===== */
+  .sidebar-notes {
+    width: var(--notes-width);
+    flex-shrink: 0;
+    position: sticky;
+    top: 52px;
+    height: calc(100vh - 52px);
+    overflow-y: auto;
+    background: var(--note-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-left: 1px solid var(--rule-color);
+    padding: 24px 0;
+    font-family: var(--font-ui);
+  }
+
+  .sidebar-notes-header {
+    padding: 0 16px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-muted);
+    font-weight: 700;
+  }
+
+  .annotation-card {
+    margin: 0 12px 8px;
+    background: var(--note-card);
+    border: 1px solid var(--rule-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .annotation-card:hover {
+    box-shadow: var(--shadow-card);
+    border-color: var(--rule-color-strong);
+  }
+
+  .annotation-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .annotation-card-header:hover { background: var(--hover-bg); }
+
+  .annotation-card-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .annotation-card-icon { font-size: 13px; }
+
+  .annotation-card-toggle {
+    font-size: 11px;
+    color: var(--ink-muted);
+    transition: transform 0.2s;
+  }
+  .annotation-card.expanded .annotation-card-toggle { transform: rotate(180deg); }
+
+  .annotation-card-body {
+    display: none;
+    padding: 0 12px 12px;
+    font-size: 12.5px;
+    color: var(--ink-light);
+    line-height: 1.7;
+    border-top: 1px solid var(--rule-color);
+    margin-top: 0;
+    padding-top: 10px;
+    font-family: var(--font-serif);
+  }
+  .annotation-card.expanded .annotation-card-body { display: block; }
+  .annotation-card-body p { margin-bottom: 6px; }
+
+  .annotation-links {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule-color);
+    font-size: 11px;
+  }
+  .annotation-links a { color: var(--accent); text-decoration: none; display: block; margin-bottom: 3px; }
+  .annotation-links a:hover { text-decoration: underline; }
+
+  .annotation-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 13px;
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  /* 高亮段落 */
+  .para-wrapper.highlight {
+    background: linear-gradient(90deg, var(--accent-light) 0%, transparent 100%);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin: -8px -12px;
+  }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 1100px) {
+    .sidebar-notes {
+      display: none;
+      position: fixed;
+      top: 52px;
+      right: 0;
+      bottom: 0;
+      z-index: 200;
+      width: 320px;
+      box-shadow: -4px 0 16px rgba(60,40,20,0.12);
+    }
+    .sidebar-notes.visible { display: block; }
+    .mobile-notes-toggle { display: inline-block; }
+    .sidebar-toc { width: 200px; }
+    .content { padding: 36px 36px 80px; }
+  }
+
+  @media (max-width: 768px) {
+    .sidebar-toc {
+      display: none;
+      position: fixed;
+      top: 52px;
+      left: 0;
+      bottom: 0;
+      z-index: 200;
+      width: 280px;
+      box-shadow: 4px 0 16px rgba(60,40,20,0.12);
+    }
+    .sidebar-toc.visible { display: block; }
+    .mobile-toc-toggle { display: inline-block; }
+    .content { padding: 24px 20px 60px; max-width: 100%; }
+    .content h1 { font-size: 24px; }
+    .content h2 { font-size: 19px; }
+    .content h3 { font-size: 17px; }
+    .content h4 { font-size: 15.5px; }
+    .para-marker { left: -24px; }
+  }
+
+  @media print {
+    .sidebar-toc, .sidebar-notes, .header, .mobile-toc-toggle, .mobile-notes-toggle, .theme-toggle { display: none !important; }
+    .content { max-width: 100%; padding: 0; box-shadow: none; background: #fff; color: #000; }
+    body { background: #fff; }
+    body::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 顶部标题栏 -->
+<header class="header">
+  <span class="header-title">Thinking with Visual Primitives · 中文版</span>
+  <div class="header-badges">
+    <span class="badge badge-original">📄 论文翻译</span>
+    <span class="badge badge-annotations">💡 含注解</span>
+    <button class="theme-toggle" onclick="toggleTheme()" title="切换亮/暗主题">☀ / ☾</button>
+    <button class="mobile-toc-toggle" onclick="toggleToc()">☰ 目录</button>
+    <button class="mobile-notes-toggle" onclick="toggleNotes()">注解</button>
+  </div>
+</header>
+
+<!-- 主布局 -->
+<div class="layout">
+
+  <!-- 左侧目录 -->
+  <nav class="sidebar-toc" id="tocSidebar">
+    <h3>📑 目录</h3>
+    <ul class="toc-list" id="tocList">
+      <li><a href="#section-abstract">摘要</a></li>
+<li><a href="#section-1">1. 引言</a></li>
+<li><a href="#section-2">2. 方法</a></li>
+<li><a href="#section-2-1" class="toc-h3">2.1 概述</a></li>
+<li><a href="#section-2-2" class="toc-h3">2.2 架构</a></li>
+<li><a href="#section-2-3" class="toc-h3">2.3 预训练</a></li>
+<li><a href="#section-2-3-1" class="toc-h3" style="padding-left:40px">2.3.1 视觉原语的定义</a></li>
+<li><a href="#section-2-3-2" class="toc-h3" style="padding-left:40px">2.3.2 大规模数据构建的动机</a></li>
+<li><a href="#section-2-3-3" class="toc-h3" style="padding-left:40px">2.3.3 大规模网络数据构建</a></li>
+<li><a href="#section-2-3-4" class="toc-h3" style="padding-left:40px">2.3.4 统一预训练</a></li>
+<li><a href="#section-2-4" class="toc-h3">2.4 任务设计与冷启动数据</a></li>
+<li><a href="#section-2-4-1" class="toc-h3" style="padding-left:40px">2.4.1 计数</a></li>
+<li><a href="#section-2-4-2" class="toc-h3" style="padding-left:40px">2.4.2 空间推理与通用视觉问答</a></li>
+<li><a href="#section-2-4-3" class="toc-h3" style="padding-left:40px">2.4.3 迷宫导航</a></li>
+<li><a href="#section-2-4-4" class="toc-h3" style="padding-left:40px">2.4.4 路径追踪</a></li>
+<li><a href="#section-2-5" class="toc-h3">2.5 后训练流水线</a></li>
+<li><a href="#section-2-5-1" class="toc-h3" style="padding-left:40px">2.5.1 专项 SFT</a></li>
+<li><a href="#section-2-5-2" class="toc-h3" style="padding-left:40px">2.5.2 专项 RL</a></li>
+<li><a href="#section-2-5-3" class="toc-h3" style="padding-left:40px">2.5.3 统一 RFT</a></li>
+<li><a href="#section-2-5-4" class="toc-h3" style="padding-left:40px">2.5.4 在线策略蒸馏</a></li>
+<li><a href="#section-3">3. 实验</a></li>
+<li><a href="#section-3-1" class="toc-h3">3.1 实现细节</a></li>
+<li><a href="#section-3-2" class="toc-h3">3.2 评估设置</a></li>
+<li><a href="#section-3-3" class="toc-h3">3.3 与前沿模型的比较</a></li>
+<li><a href="#section-3-4" class="toc-h3">3.4 定性结果</a></li>
+<li><a href="#section-3-4-1" class="toc-h3" style="padding-left:40px">3.4.1 边界框作为视觉原语</a></li>
+<li><a href="#section-3-4-2" class="toc-h3" style="padding-left:40px">3.4.2 点作为视觉原语</a></li>
+<li><a href="#section-4">4. 局限性</a></li>
+<li><a href="#section-5">5. 结论</a></li>
+    </ul>
+  </nav>
+
+  <!-- 中间正文 -->
+  <main class="content" id="mainContent">
+    <h1 id="paper-title">Thinking with Visual Primitives</h1>
+<hr>
+<p id="p-1" style="color:var(--ink-muted);text-align:center;font-size:14px;line-height:1.6;font-family:var(--font-ui)">Ruijie Lu1,2,∗, Yiyang Ma1,∗, Xiaokang Chen1,∗, ‡, Lingxiao Luo1,3,∗, Zhiyu Wu1,∗, Zizheng Pan1,∗, Xingchao Liu1,∗, Yutong Lin1, Hao Li1, Wen Liu1, Zhewen Hao1, Xi Gao1, Shaoheng Nie1, Yixuan Wei1, Zhenda Xie1, Ting Chen3, Gang Zeng2</p>
+<p id="p-2" style="color:var(--ink-muted);text-align:center;font-size:14px;line-height:1.6;font-family:var(--font-ui)">1DeepSeek-AI 2Peking University 3Tsinghua University ∗: Core contributors ‡: Project lead</p>
+<h2 id="section-abstract">摘要</h2>
+<p id="p-3">尽管多模态大语言模型 (MLLM) 取得了显著进展，当前主流的思维链 (CoT)<span class="note-ref" data-note="note-1">1</span> 范式仍然主要局限于语言空间。近期的研究致力于通过高分辨率裁剪来弥合感知鸿沟 (Perception Gap)<span class="note-ref" data-note="note-2">2</span>（例如"Thinking with Images"），但这些工作忽略了一个更根本的瓶颈：参考鸿沟 (Reference Gap)<span class="note-ref" data-note="note-3">3</span>。自然语言固有的模糊性往往无法为复杂空间布局提供精确、无歧义的指针，导致在需要严格定位的任务中出现逻辑崩溃。本文提出了"视觉原语思维"(Thinking with Visual Primitives)，一种全新的推理框架，将空间标记——如点和边界框——提升为"最小思维单元"。通过将这些视觉原语直接交织到思维过程中，模型可以在"推理"的同时进行"指认"，将其认知轨迹有效锚定到图像的物理坐标上。值得注意的是，本框架构建于一个高度优化的架构之上，具有极高的视觉标记效率。尽管模型规模紧凑，图像标记预算显著低于同类，我们的模型在一组具有挑战性的视觉问答任务上达到了前沿竞争水平的性能，与 GPT-5.4、Claude-Sonnet-4.6 和 Gemini-3-Flash 等模型持平甚至超越。这展示了一条通向更高效、更具可扩展性的类系统2多模态智能的路径。</p>
+<h2 id="section-1">1. 引言</h2>
+<p id="p-4">大语言模型 (LLM) 与计算机视觉的融合开启了多模态大语言模型 (MLLM) 的时代，使其具备复杂的场景理解能力。然而，当我们推动这些模型走向复杂推理——通常被概念化为 Daniel Kahneman 的"系统2"<span class="note-ref" data-note="note-4">4</span>思维 [23] 时——当前范式的一个根本性局限随之浮现。这些模型的内部推理通常表现为思维链 (CoT)，它在语言领域日益强大，但在很大程度上与视觉领域相脱节。</p>
+<p id="p-5">近期提升多模态推理能力的工作，如前沿模型中采用的视觉扩展策略 [8, 12, 21, 24, 26, 34]，主要解决了感知鸿沟问题。通过采用高分辨率裁剪和动态图块化，这些模型确保它们能"看到"图像中的细粒度细节。然而，"看到"并不等于"推理"。即使具备完美的感知能力，MLLM 在涉及复杂空间布局或密集目标交互的任务中仍然经常出现逻辑崩溃。我们将这一失败归因为参考鸿沟：自然语言无法作为连续视觉空间中精确、无歧义指针的固有缺陷。在密集计数或多步空间推理等场景中，模型的语言"思维"会失去对它们所要指代的视觉实体的追踪，导致级联幻觉。</p>
+<p id="p-6">虽然近期的工作 [6, 27, 32] 探索了将边界框集成到思维链过程中，但它们主要将定位视为一种事后验证机制，用于增强感知密集型任务。这些方法通常局限于高分辨率基准测试，其挑战在于"看到"而非"推理"，且它们对劳动密集型监督的依赖进一步限制了可扩展性。更重要的是，它们未能解决复杂结构推理中的参考鸿沟——例如拓扑导航——在这些任务中，视觉标记必须作为思维的内在媒介发挥作用，而不仅仅是可验证的证据。</p>
+<p id="p-7">本文提出了一种范式转变：视觉原语思维。我们超越将视觉定位视为次要任务或最终输出的做法，将空间标记——点和边界框——提升为直接交织到模型推理轨迹中的"最小思维单元"。这一机制的灵感来源于人类认知过程。在穿越复杂迷宫或计数密集物体集合时，人类自然地使用指示性指针（如手指指向）来降低认知负荷并保持逻辑一致性。通过将视觉原语交织到思维过程中，我们的模型模拟了这种"指认-推理"协同机制，有效地将抽象的语言思维锚定到具体的空间坐标上。</p>
+<p id="p-8">此外，本框架构建于一个架构高效的基础 [3] 之上，该基础专为高吞吐量、长上下文多模态交互而设计。传统方法依赖大量视觉标记序列来弥补视觉缺陷，与之不同的是，我们的模型利用压缩稀疏注意力 (CSA)<span class="note-ref" data-note="note-5">5</span> [3]，将每 m 个视觉标记的键值 (KV) 缓存<span class="note-ref" data-note="note-6">6</span>压缩为一个条目。这一设计使模型仅需使用其他前沿系统一小部分的视觉标记即可运行，同时保持相当的认知深度。</p>
+<p id="p-9">通过广泛的基准测试，我们证明视觉原语思维带来了推理准确率的显著飞跃。我们的模型在广泛的挑战性空间推理和视觉问答任务中取得了竞争性性能，与 GPT、Claude 和 Gemini 的最新迭代版本持平或超越（见图 1）。我们的研究结果表明，多模态智能的未来不仅在于看到更多像素，更在于开发更精确、更少歧义的指代机制，以弥合语言与视觉世界之间的鸿沟。</p>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page2_fig1.png" alt="Figure 1">
+  <figcaption><strong>图 1：</strong> (a) 各模型处理 800 × 800 分辨率图像时的标记消耗量。(b) 7 个基准测试的平均性能——包括计数和空间推理——不含内部基准测试。我们注意到，所报告的分数仅涵盖与本文研究焦点直接相关的评估维度的子集，因此不代表模型的整体能力。对于 800 × 800 的输入，我们的模型在 KV 缓存中仅保留约 90 个条目，通过高效的压缩策略实现了竞争性性能。建议在屏幕上查看。</figcaption>
+</div>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page3_fig1.png" alt="Figure 2">
+  <figcaption><strong>图 2：</strong> 模型架构与训练流程。基于 DeepSeek-V4-Flash [3] 开发，我们的模型在预训练阶段获得基础的视觉原语生成能力。随后进行后训练阶段，采用专家级专业化与整合范式。建议在屏幕上查看。</figcaption>
+</div>
+<h2 id="section-2">2. 方法</h2>
+<h3 id="section-2-1">2.1 概述</h3>
+<p id="p-10">本节首先介绍模型架构。接下来，我们详细阐述训练流程（如图 2 所示），并描述预训练和后训练各阶段所使用的对应数据。</p>
+<h3 id="section-2-2">2.2 架构</h3>
+<p id="p-11">我们的模型采用了与 LLaVA [18, 19] 类似的标准架构。具体而言，输入图像由视觉 Transformer (ViT)<span class="note-ref" data-note="note-7">7</span> 处理以提取视觉特征，这些特征随后与语言指令拼接，形成视觉-语言标记的交错序列。该序列随后被送入大语言模型 (LLM) 以生成响应。语言骨干网络使用 DeepSeek-V4-Flash [3] 实例化，这是一个混合专家 (MoE)<span class="note-ref" data-note="note-8">8</span> 模型，包含 284B 总参数量和 13B 推理时的活跃参数量。</p>
+<p id="p-12">在视觉编码方面，我们采用 DeepSeek-ViT，这是一个从头训练的内部 ViT，支持任意分辨率输入。它首先使用 14 × 14 的图块大小对输入图像进行分区，生成图块标记。随后，在 ViT 输出端，我们应用 3 × 3 的空间标记压缩（将每 9 个相邻图块标记沿通道维度压缩为单个标记）。此外，利用基础 LLM 中集成的压缩稀疏注意力 (CSA) 机制，存储在键值 (KV) 缓存中的视觉标记被进一步压缩 4 倍。</p>
+<p id="p-13">以一个具体的流程为例，考虑一张 756 × 756 分辨率的输入图像，包含 571,536 个像素。图块嵌入层将其处理为 2,916 个图像图块标记送入 ViT。经过 3 × 3 压缩后，预填充阶段仅有 324 个视觉标记被送入 LLM。最终，CSA 机制将其减少到 KV 缓存中仅 81 个视觉 KV 条目。在整个过程中，从原始像素到最终 KV 缓存条目，系统实现了 7,056× 的总压缩比。</p>
+<h3 id="section-2-3">2.3 预训练</h3>
+<h4 id="section-2-3-1">2.3.1 视觉原语的定义</h4>
+<p id="p-14">在预训练阶段，我们的目标是赋予模型输出"视觉原语"的基础能力。我们确定了计算机视觉中两种标准输出格式作为原语：边界框<span class="note-ref" data-note="note-9">9</span>和点。这两种表示方式都承担空间指代的关键角色。然而，它们具有不同的功能优势：边界框擅长捕捉特定目标的精确位置和尺度，而点更适合抽象的视觉指代，例如追踪运动轨迹或解决拓扑推理问题。</p>
+<h4 id="section-2-3-2">2.3.2 大规模数据构建的动机</h4>
+<p id="p-15">虽然现有的公开数据集（如 COCO [17] 和 Pixmo-Points [4]）提供了相对准确的边界框或点标注，但它们存在规模不足和多样性明显缺乏的问题。为确保"视觉原语思维"范式的泛化能力，我们有必要构建具有丰富语义和高多样性的大规模网络数据。我们优先大规模扩展边界框数据，理由如下：</p>
+<ul><li>标注的确定性：边界框紧密包围目标，其标注相对确定。相比之下，点标注高度模糊；目标边界内的任何坐标都可以作为有效的参考点，导致缺乏严格的真值。在遮挡等极端场景中，指向背景目标的点可能落在前景遮挡物上，造成严重的歧义。</li><li>任务泛化性：训练为输出边界框的模型可以轻松泛化到基于点的格式。由于边界框可以由两个点（左上角和右下角坐标）定义，它天然包含了点表示。</li><li>信息丰富度：与点相比，边界框支持更广泛的下游任务。点仅提供空间定位，而边界框封装了详细的几何信息（如宽度和高度）。这些额外上下文使模型能够在"视觉原语思维"框架内执行更复杂的推理。</li></ul>
+<hr>
+<h4 id="section-2-3-3">2.3.3 大规模网络数据构建</h4>
+<p id="p-16"><strong>原始数据获取。</strong> 我们通过在多个网站上进行大规模网络爬取，获取了海量与边界框定位相关的互联网数据。以 Huggingface 为例，我们利用其官方 API 筛选标记为"Object Detection"或"Grounding"的任务数据。我们根据热度指标（如按点赞数和下载量排序）进行初步筛选，并严格排除所有验证集和测试集划分，以防止模型评估期间出现潜在的数据污染（即数据泄露）<span class="note-ref" data-note="note-10">10</span>。此外，我们使用基于 LLM 的智能体解析这些代码仓库的 README.md 文件，自动将各种数据集结构转换为我们预定义的统一存储格式。经过对这些网站的广泛爬取和去重，我们最终整理出 97,984 个边界框定位相关的数据源。对采样数据的人工检查揭示了高度多样的目标类别，从常见目标（如人、人脸）到特定领域的实体（如 CT 扫描中的病灶区域或特定动漫角色）。然而，这些原始边界框标注仍存在各种问题，如语义模糊和几何不准确，需要进一步的严格过滤。我们设计了两步过滤流程，如下所述。</p>
+<p id="p-17"><strong>第一步：语义审查。</strong> 鉴于直接爬取的数据集充斥着不适合视觉-语言对齐训练的噪声标签，我们引入了自动化的、由 MLLM 驱动的语义审查机制。传统的数据过滤主要关注边界框的几何精度，而本阶段旨在确保语义标签的有效性。具体而言，此审查过程侧重于消除三类致命的语义缺陷：</p>
+<ul><li>无意义的机器码和乱码：许多原始数据集保留了内部开发代码（如纯数字类别"0"或"1"）。由于这些标签缺乏人类可读的自然语言语义，强制模型学习此类映射将严重损害其语言生成能力。因此，这类数据被直接丢弃。</li><li>不可泛化的私有实体：某些数据集使用特定的个人代词（如"MyRoommate"）或私有标识符（如"ID_Card_1"）。由于 MLLM 无法从孤立样本中泛化非公众人物的视觉特征（即"某人"的视觉特征无法泛化为通用概念），此类数据被严格过滤。反之，广为人知的名人或公众人物则予以保留。</li><li>模糊缩写和主观评价：特定领域（如工业检测）中常见的标签，如"OK"或"NG"(Not Good)，通常缺乏具体的视觉描述性。例如，一个光秃秃的"OK"标签引入了极端的语义模糊性，因为一个"完好的苹果"和一个"完好的电路板"在视觉上毫无关联。</li></ul>
+<p id="p-18">对于每个数据集，我们采样三张图像，并提示模型根据上述标准计算质量分数（范围从 0 到 10）。模型随后输出明确的"保留"(KEEP) 或"丢弃"(DISCARD) 决定，并附带清晰的理由。此审查阶段从最初的 97,984 个数据源中保留了 43,141 个，这些数据随后进入下一过滤阶段。</p>
+<p id="p-19"><strong>第二步：视觉-几何质量审查。</strong> 我们进一步评估边界框的几何质量和标注完整性，以确保模型学习精确的区域-文本对齐。此过程专门针对三类结构性标注缺陷：</p>
+<ul><li>严重的标注遗漏（低召回率）：指图像中存在与给定标签对应的多个实例，但仅标注了少数几个的情况。如果在采样过程中检测到大规模的标注遗漏问题（如遗漏率 > 50%），则该数据集被立即丢弃。</li><li>严重的截断和偏移：指边界框未能合理包围目标物体的情况。在实践中，我们采用差异化容错策略：略松的框（包含少量背景噪声）被视为可接受；然而，切断目标关键视觉特征的严重截断（如截掉头部或车轮）被严格判定为不可接受。</li><li>巨型框问题：如果一个边界框无意义地覆盖超过 90% 的图像面积，通常表明图像分类数据被强制转换为检测数据。如果这种情况仅在采样批次中偶尔出现，则被视为可接受的噪声。然而，如果在三张采样图像中持续出现此类全局框，则该数据集被认为缺乏有意义的定位信息，予以丢弃。</li></ul>
+<p id="p-20">此审查阶段在剩余的 43,141 个数据源中进一步保留了 31,701 个。为实现数据集平衡，我们设计了基于类别的采样策略。对于每个数据集中的每个类别，我们随机采样与该类别关联的 N 张图像（如果某类别可用图像总数少于 N，则全部保留）。由于单张图像可能同时属于多个类别，我们在按类别选择后对聚合集合进行全局去重。实践中，我们设 N = 1,000，最终获得超过 4000 万个高质量样本。</p>
+<h4 id="section-2-3-4">2.3.4 统一预训练</h4>
+<p id="p-21">对于通用多模态数据，我们主要使用大规模网络爬取数据，而非通过模型蒸馏生成的合成数据（如合成图像描述）。原始数据经过精心整理，我们不使用 LLM 重写数据内容。关于旨在赋予模型输出视觉原语基础能力的专用数据，除了上述网络爬取和过滤之外，我们还纳入了多个高质量公开数据集，如 [4, 15, 17, 25, 29, 33]。我们为边界框定位和点数据建立了统一的格式标准。对于边界框定位任务，我们设计了几种提示模板，如"Locate TARGET in this image and report its bounding box coordinates."，其中 TARGET 作为查询对象的占位符。对应的响应格式如下：<code><|ref|>TARGET<|/ref|><|box|>[[x1,y1,x2,y2],[x3,y3,x4,y4]...]<|/box|></code>，其中 <code><|ref|></code>、<code><|/ref|></code>、<code><|box|></code> 和 <code><|/box|></code> 是词汇表中的特殊标记。x1,y1 和 x2,y2 分别表示边界框的左上角和右下角坐标。这些坐标被归一化为 0 到 999 之间的离散整数。在多实例场景中，边界框按从左到右的顺序排列。类似地，对于点任务，我们设计了提示模板，如"Help me find TARGET. Give me the center point for each instance."。预期响应格式定义为：<code><|point|>[[x1,y1],[x2,y2]...]<|/point|></code>，其中 <code><|point|></code> 和 <code><|/point|></code> 是特殊标记，x1,y1 表示点坐标。值得注意的是，与边界框定位格式不同，点任务的响应范式不需要输出目标名称。这一设计选择旨在将基于点的表示扩展到更抽象的概念，例如使用点的序列来表示轨迹。最终，整个预训练阶段消耗了万亿级的多模态标记。</p>
+<hr>
+<h3 id="section-2-4">2.4 任务设计与冷启动数据</h3>
+<p id="p-22"><strong>后训练的冷启动数据<span class="note-ref" data-note="note-11">11</span>。</strong> 虽然预训练赋予了模型通用多模态先验和基础视觉原语能力，后训练（专项 SFT/RL 及后续的统一 RFT）需要一个小规模但高精度的冷启动数据集，以在视觉原语输出接口下引导指令遵循和奖励学习。具体而言，我们构建的冷启动数据具备以下特征：(i) 明确的监督目标，来自标注（如边界框/点）或程序化生成；(ii) 尽可能使用自动验证器（如基于规则的检查器）以减少标签噪声。我们选择了能够从基于视觉原语的推理中获益的代表性任务（通过边界框或点），并从四个关键维度设计冷启动数据：计数、空间推理与通用视觉问答、迷宫导航和路径追踪。</p>
+<h4 id="section-2-4-1">2.4.1 计数</h4>
+<p id="p-23">多模态大语言模型在精确计数方面持续面临困难，尤其是在密集场景中。与人类通常采用系统性扫描-累积策略不同，基于语言的模型在目标数量较多时往往无法建立精确的目标对应关系。我们通过使用边界框作为视觉原语来提供明确的指代锚点，从而解决这一根本瓶颈。</p>
+<p id="p-24"><strong>任务分解。</strong> 我们将计数任务分为两类：粗粒度计数和细粒度计数。前者关注通用类别的计数（如"狗"），后者需要根据特定属性或空间约束区分目标（如"白色的狗"或"左边的狗"）。</p>
+<p id="p-25"><strong>粗粒度计数。</strong> 我们聚合了多个密集检测数据集的数据，包括 [2, 9, 14, 22, 28, 29, 35]。为确保数据质量，我们基于三个主要标准实施过滤流程：避免过高的目标密度、确保边界框足够大以清晰识别，以及保持标注真值框的高召回率。对于过滤后的样本，我们提示 MLLM 根据图像和边界框标注生成思维内容和简洁的最终响应。思维内容的生成遵循结构化的三步协议：(1) 意图分析，模型识别目标类别；(2) 批量定位，模型利用视觉原语同时定位所有候选目标（我们发现批量定位对于粗粒度任务更高效，因为它利用了模型固有的定位优势，同时避免重复枚举）；(3) 统计汇总，基于视觉原语进行统计。为消除冷启动训练中的噪声，我们实施了严格的验证机制，确保思维内容中所有边界框视觉原语与元数据坐标严格对齐、遵循预定义语法，且与最终计数数值一致。</p>
+<p id="p-26"><strong>细粒度计数。</strong> 由于缺乏专门用于细粒度计数的公开数据集，我们开发了一套专用数据构建流程。(1) 问题生成：利用 GQA [10] 中的图像和场景图元数据，我们提示 MLLM 策划信息丰富的细粒度计数问题。无法产生有意义问题的样本被丢弃。对于每个有效样本，我们记录真值目标 ID、被排除的负样本候选 ID，以及问答对构建的底层理由。(2) 思维内容合成：以图像、场景图以及先前生成的问题（及其关联 ID 和理由）为输入，我们引导 MLLM 合成集成视觉原语的推理链。虽然整体思维结构与粗粒度计数类似，但模型被明确指示执行顺序扫描——系统地识别并逐一验证场景中每个可能的目标是否符合指定的细粒度约束。我们还将此方法应用于构建真值计数为零的负样本，从而增强模型对幻觉的鲁棒性。</p>
+<p id="p-27">计数任务共计约 10,000 个冷启动样本。示例见图 3。</p>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page8_fig1.png" alt="Figure 3">
+  <figcaption><strong>图 3：</strong> 粗粒度和细粒度计数冷启动数据的示例。模型执行意图分解，利用视觉原语锚定所有相关实体，随后在视觉领域中进行系统性计数。建议在屏幕上放大查看。</figcaption>
+</div>
+<h4 id="section-2-4-2">2.4.2 空间推理与通用视觉问答</h4>
+<p id="p-28">我们将空间推理和通用 VQA 合并为一个统一类别。这种整合有效缓解了纯语言描述中固有的指代模糊和语义漂移。在构建冷启动数据时，我们优先考虑空间推理任务，基于以下假设：在此发展出的视觉原语思维能力将自然泛化到更广泛的 VQA 场景。我们的数据整理涵盖自然和合成两类环境。</p>
+<p id="p-29"><strong>自然场景中的数据构建。</strong> 利用 GQA [10] 中的图像和场景图，我们提示 MLLM 设计以空间关系和目标交互为核心的问题，以及相应的思维内容。生成的思维内容遵循结构化流程，包括意图分析、目标定位和关系推理。为解决拥挤场景中潜在的模糊性，模型被指示选择具有辨识度的目标，并应用多属性约束（如结合动作和属性）来唯一指定目标。然而，由于 GQA 中的关系结构相对简单，大规模生成复杂的多跳推理样本仍然具有挑战性。为克服这一局限并充分释放模型潜力，我们进一步纳入了复杂的合成数据。</p>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page9_fig1.png" alt="Figure 4">
+  <figcaption><strong>图 4：</strong> 空间推理冷启动数据的示例。模型执行意图分解，利用视觉原语锚定所有相关实体，促进复杂的多跳逻辑推理。建议在屏幕上放大查看。</figcaption>
+</div>
+<p id="p-30"><strong>合成场景中的数据构建。</strong> 我们利用 CLEVR<span class="note-ref" data-note="note-12">12</span> [13] 工具链生成多跳推理数据。该框架支持可控的场景生成，目标密度可变，同时支持问题生成和程序化执行轨迹，将每个推理步骤映射到目标级引用（如特定目标 ID）。为监督视觉原语的生成，我们基于官方工具链将 3D 目标坐标投影为 2D 边界框。给定渲染图像、场景图、问题、答案和执行轨迹，我们提示 MLLM 合成"视觉原语思维"链，包括意图分析、任务分解和多跳定位推理。示例见图 4。</p>
+<p id="p-31"><strong>负样本增强。</strong> 为提高模型的可靠性，我们构建了查询目标或关系不存在的负训练样本。在这些情况下，模型被训练基于视觉证据提供"忠实的拒绝"，而非生成虚假响应。</p>
+<p id="p-32">空间推理与通用 VQA 领域共计生成 9,000 个冷启动样本。</p>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page10_fig1.png" alt="Figure 5">
+  <figcaption><strong>图 5：</strong> 迷宫导航任务冷启动数据的示例。模型首先识别起点和终点，然后以 DFS 方式探索可能的路径。建议在屏幕上放大查看。</figcaption>
+</div>
+<h4 id="section-2-4-3">2.4.3 迷宫导航</h4>
+<p id="p-33">虽然 MLLM 已展示出解决高级科学问题的能力，但拓扑推理的鲁棒范式仍然难以实现。纯语言的 CoT 难以准确描述不规则形状的轨迹。为填补这一空白，视觉原语思维——它可以采用点作为认知单元——天然适合应对这类挑战。我们首先引入迷宫导航任务，要求模型判断迷宫的可解性——这一过程需要对空间连通性和可达性有根本性的理解。我们通过合成数据生成来构建冷启动数据，详情如下。</p>
+<p id="p-34"><strong>设计方法。</strong> 我们使用深度优先搜索 (DFS)<span class="note-ref" data-note="note-13">13</span>、Prim 和 Kruskal 算法生成可解且非平凡的迷宫。这三种算法都生成具有挑战性的迷宫，其中任意两个单元格之间仅存在少数路径，确保解无法被轻易猜出。我们设计了三种迷宫拓扑：矩形网格、由同心环和角度扇区组成的圆形迷宫，以及六边形（蜂窝状）网格。为增强模型鲁棒性，我们还设计了一系列不可解迷宫。我们首先生成一个可解迷宫并获得解路径，然后在该路径中段周围故意设置几堵墙——避免在起点或终点附近——以较不明显的方式破坏连通性，使迷宫初看可解，但实际上需要完整搜索才能确认不存在有效路径。我们应用了多种视觉样式，包括渐变和超粗墙壁、多样的背景图案、多种标记类型，以及随机小角度旋转，以防止对特定视觉模式的过拟合。图像分辨率随机化，宽高比连续采样，网格尺寸按比例调整。</p>
+<p id="p-35"><strong>难度控制。</strong> 迷宫导航的难度很大程度上取决于模型需要链接多少个视觉推理步骤。我们通过改变网格大小来控制这一点。随着网格变大，模型必须解析更多单元格、在更长距离上追踪连通性，并处理更多需要回溯的死胡同。每一项都增加了整体推理复杂度。具体而言，简单迷宫仅需模型链接少量局部连通性检查，而噩梦级迷宫则要求持续组合数百个此类原语操作，同时不丢失对已探索区域的追踪。我们在每个难度级别强制执行最低分辨率阈值，确保即使在最难的配置中视觉原语仍可感知。这保证了任务难度源于推理复杂度而非视觉模糊性。</p>
+<p id="p-36"><strong>思维内容合成。</strong> 我们设计了多种自然语言格式和模板来描述基于 DFS 的探索过程，包括前向探索和回溯。每个探索步骤通过指向坐标锚定到图像上，将视觉原语操作——检查单元格的墙壁连通性、前进到相邻单元格、或从死胡同后退——显式转化为语言化的推理链。这作为冷启动监督，教会模型以视觉原语进行思维，而不仅仅是感知它们。最终输出指示迷宫是否可解，如果可解则提供经过验证的解路径。</p>
+<p id="p-37">迷宫导航任务共计生成 460,000 个不同难度的冷启动样本。示例见图 5。</p>
+<h4 id="section-2-4-4">2.4.4 路径追踪</h4>
+<p id="p-38">除迷宫导航任务外，我们进一步设计了路径追踪任务，以增强模型在各种场景中利用视觉原语进行推理的能力。该任务要求模型沿着指定的曲线穿过纠缠重叠的线条，追踪其到达的终点。我们将此任务实例化为通过程序化生成的纠缠曲线图像进行线条追踪，每条线连接一个唯一标记的起点到一个终点。</p>
+<p id="p-39"><strong>设计方法。</strong> 我们生成由多条贝塞尔曲线<span class="note-ref" data-note="note-14">14</span>组成的图像，每条曲线连接一个标记的起点到一个标记的终点。核心挑战在于交叉消歧：每当两条线交叉时，模型必须调用局部几何连续性原语来判断哪个分支是目标曲线的延续。为确保这一原语真正得到检验，我们仔细防止任何终点与无关线条重叠或交叉，对违反这些约束的配置进行丢弃并重新生成。我们还进一步引入了统一样式模式，其中每条线共享相同的颜色和笔触宽度，消除基于颜色的捷径，迫使模型仅依靠交叉处的曲率连续性——这直接检验了路径追踪原语是否被内化，而非通过颜色匹配来近似。难度随线条数量和曲率振幅自然缩放：简单实例呈现少量平缓弯曲的线条且交叉稀疏，而困难实例则将许多紧密缠绕的曲线挤在画布上，使图形-背景原语必须应用的交叉点成倍增加。图像分辨率、宽高比和视觉样式（调色板、线条样式、终点标记、背景）均随机化，以防止肤浅的模式匹配。</p>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page12_fig1.png" alt="Figure 6">
+  <figcaption><strong>图 6：</strong> 路径追踪任务冷启动数据的示例。模型识别起点和终点，然后使用视觉原语追踪线条。建议在屏幕上放大查看。</figcaption>
+</div>
+<p id="p-40"><strong>思维内容合成。</strong> 我们将路径追踪过程显式表示为沿目标曲线采样的坐标序列，反映了模型如何在图像上关注并跟随路径。过程从定位查询的起点开始，然后通过一系列中间航路点沿曲线追踪，最终识别到达的终点。重要的是，这些航路点的密度适应曲线的局部几何。直截了当的段用较少的点表示，而高曲率区域或密集交叉处则用更细粒度的坐标描述，类似于人类在视觉复杂区域会放慢速度并更加仔细地关注。</p>
+<p id="p-41">路径追踪任务共计生成 125,000 个不同难度级别的冷启动样本。示例见图 6。</p>
+<h3 id="section-2-5">2.5 后训练流水线</h3>
+<p id="p-42">为了最大化模型对边界框和点两种视觉原语的学习效率，我们的后训练流水线采用"先训练专家模型—再合并"的策略，具体细节如下。</p>
+<h4 id="section-2-5-1">2.5.1 专项 SFT</h4>
+<p id="p-43">在专项 SFT 阶段，整体训练数据由 70% 的通用多模态和纯文本数据以及 30% 的专项"视觉原语思维"数据组成。我们分别使用第 2.3.4 节中构建的两种冷启动数据进行 SFT：边界框（基于定位的思考）和点（基于指向的思考）。这种分离避免了在专项数据量相对较少时出现模式冲突。经过该训练阶段后，我们获得两个专项模型，分别记为 FTwG 和 FTwP。</p>
+<h4 id="section-2-5-2">2.5.2 专项 RL</h4>
+<p id="p-44">随后，我们分别对 FTwG 和 FTwP 独立应用强化学习 (Reinforcement Learning, RL)。遵循 [3]，我们采用组相对策略优化 (GRPO)<span class="note-ref" data-note="note-15">15</span> 算法，并沿用其超参数设置。鉴于冷启动数据中思维内容所包含的视觉原语（例如边界框和点）已经过严格验证，我们在 RL 阶段不对模型思维过程中生成的视觉原语进行显式监督。这一设计提升了 RL 训练数据的可扩展性。因此，我们在收集 RL 数据时仅需要图像、问题和最终答案，这显著拓宽了可用数据的范围。</p>
+<p id="p-45">在训练过程中，我们设计了多个奖励模型 (RM)<span class="note-ref" data-note="note-16">16</span>，从格式约束、质量约束和准确率约束三个角度为每个任务提供同步监督。前两个约束在不同任务之间共享，最后一个准确率约束则需要根据任务类型进行针对性设计。</p>
+<p id="p-46"><strong>格式 RM。</strong> 该 RM 基于规则对输出进行评估，生成一个 0 到 1 之间的奖励分数。具体而言，它验证模型生成的视觉原语的表示格式是否正确。对于基于定位的思考，该 RM 还会额外检查模型输出是否存在冗余，例如生成重复的边界框；这有效缓解了 SFT 模型陷入边界框生成无限循环的问题。</p>
+<p id="p-47"><strong>质量 RM。</strong> 这是一个基于 LLM 的生成式奖励模型 (GRM)<span class="note-ref" data-note="note-17">17</span>。质量 RM 将模型生成的思维内容和最终回答作为输入，从以下几个方面进行评估：</p>
+<ul><li>模型的回答是否存在冗余。</li><li>模型的思维内容与其最终回答是否一致。</li><li>在"视觉原语思维"过程中是否存在自相矛盾。</li><li>当模型以边界框形式输出视觉原语时，所指代的对象是否为有意义的实体。</li><li>模型是否表现出"奖励欺骗"行为，例如在回答中强行捏造一个与自身预测相同的伪真值来欺骗奖励模型。</li></ul>
+<p id="p-48">最终，模型从三个离散等级 [0.0, 0.5, 1.0] 中输出一个分数，并为该分数提供理由。下面，我们将介绍各任务专用的准确率 RM。</p>
+<p id="p-49"><strong>计数任务的准确率 RM。</strong> 为了提供平滑且信息丰富的学习信号，我们设计了一个基于规则的计数奖励模型。该模型捕捉预测值与真值之间的偏离程度，而非依赖二元精确匹配监督。具体而言，我们对相对误差施加平滑指数衰减，使得接近正确的预测仅受到轻微惩罚，而较大的错误则获得显著更低的分数。奖励 R 的计算公式为：</p>
+<p id="p-50">$$R(\hat{y}, y) = \alpha \cdot \exp\left(-\beta \cdot \frac{|\hat{y} - y|}{|y| + 1}\right), \quad (1)$$</p>
+<p id="p-51">其中 $\hat{y}$ 和 $y$ 分别表示预测计数和真值计数。归一化项 $|y| + 1$ 使奖励取决于相对误差，从而在目标数量较多的场景中允许更大的容差。系数 $\alpha$ 和 $\beta$ 分别控制整体奖励尺度和衰减速率。在实践中，我们设定 $\alpha = 0.7$、$\beta = 3$，这两个值经过经验选择，以提供稳定且平滑的学习信号。</p>
+<hr>
+<p id="p-52"><strong>空间推理与通用 VQA 的准确率 RM。</strong> 对于这些任务，我们设计了一个基于 LLM 的 GRM。我们将模型的思维内容、其最终回答、用户查询和真值答案输入 GRM，分别对思维过程和回答进行独立评估与打分。最终奖励取两个分数的平均值。</p>
+<p id="p-53"><strong>迷宫导航的准确率 RM。</strong> 为了鼓励模型探索迷宫，我们设计了一个基于规则的 RM。最终奖励是以下各分量的加权和。</p>
+<ul><li>因果探索进度。我们按顺序处理模型的逐步探索。当遇到第一次穿墙违规（即模型声称在两个被墙壁隔开的单元格之间移动）时，我们截断之后的所有探索，因为它们在因果上已失效。然后，我们计算已探索区域与终点之间的最短距离。该分数等于 1 减去该距离与真值路径长度的比值。该分数衡量了在截断之前，相对于最优可达区域，有多少迷宫被合法地探索了，从而奖励彻底且正确的探索。此项仅适用于可解迷宫。对于不可解迷宫，此项保持为 1。</li><li>探索完整性。对于不可解迷宫，模型必须通过穷举探索可达区域来证明不存在可行路径。该分数等于已探索区域数量与所有可达区域数量的比值。该分量衡量了在模型（因果有效的）探索轨迹中出现的、真正可达的单元格所占比例。此项仅适用于不可解迷宫。对于可解迷宫，此项保持为 1。</li><li>穿墙惩罚。独立于上述因果截断，我们扫描整个探索轨迹以统计每一次穿墙违规的转移。该分数等于 1 减去穿墙违规转移数量与迷宫所有合法转移数量的比值。这直接惩罚每一次错误的连通性判断，确保穿墙违规即使在探索后期发生也不会零代价。</li><li>最终路径有效性。当模型声称迷宫可解时，它必须输出一条具体的求解路径。我们验证该路径中相邻单元格是否合法连通（无穿墙违规），以及路径是否构成从起点到终点的连续路线。此项为可解迷宫的二元分数。对于不可解迷宫，此项保持为 1。</li><li>答案正确性。二元分数，衡量模型的可解性判断是否与真值一致。</li></ul>
+<p id="p-54">这种分解确保奖励信号是密集且信息丰富的：模型因每一个正确应用的视觉原语而获得奖励，而非仅仅因为最终的二元答案。</p>
+<p id="p-55"><strong>路径追踪的准确率 RM。</strong> 为了促使模型沿线追踪，我们提出一个基于规则的 RM 来评判生成的点序列。最终奖励是以下各项的加权和。</p>
+<ul><li>轨迹准确率。我们从两个互补方向评估预测轨迹与真值曲线的对齐程度。在前向方向上，对于每个预测点，我们计算其到真值折线任意线段的最小距离，然后对所有预测点的距离取平均。此项惩罚偏离真实路径的点。在反向方向上，对于每个真值点，我们计算其到预测折线任意线段的最小距离。此项惩罚模型跳过曲线部分时导致的不完整覆盖。最终轨迹分数取两个方向的平均值。</li><li>端点准确率。我们分别验证模型是否正确识别了起点和终点位置。对于每个端点，我们计算模型预测坐标与真值边界框中心之间的距离。该分数随距离衰减，超过容差阈值时降为零。</li><li>轨迹连续性惩罚。如果模型轨迹中最后一个点与其预测端点之间的距离超过阈值，则施加固定惩罚。这阻止模型输出部分轨迹后"跳跃"到一个猜测的端点，而非实际追踪完整路径。</li><li>答案正确性。衡量模型最终回答中的端点标签是否与真值匹配的分数。</li></ul>
+<p id="p-56">双向轨迹评估至关重要。仅靠前向方向将允许模型只输出起点附近少数安全点，而仅靠反向方向则不会惩罚臆造的绕行。两者结合，促使模型生成目标曲线的完整且准确的坐标轨迹。</p>
+<p id="p-57"><strong>RL 数据。</strong> 我们在 RL 阶段扩展了数据池。在 RL 训练之前，我们使用 SFT 冷启动模型（FTwG 或 FTwP）对数据池执行 rollout，为每个样本生成 N 个 rollout。随后，根据 RM 分数，我们统计每个样本的 N 个 rollout 中正确回答的数量，并将数据池划分为三个难度等级：</p>
+<ul><li>简单：所有 N 个 rollout 均正确。</li><li>中等：正确 rollout 的数量 k 满足 1 ≤ k < N。</li><li>困难：所有 N 个 rollout 均不正确。</li></ul>
+<p id="p-58">我们从"中等"类别中选取样本进行 RL，确保模型在 GRPO 训练过程中获得有价值的监督信号。经过专项 RL 阶段后，我们获得两个专家模型，分别记为 ETwG 和 ETwP。</p>
+<h4 id="section-2-5-3">2.5.3 统一 RFT</h4>
+<p id="p-59">借助上述获得的鲁棒专家模型 ETwG 和 ETwP，我们将基于定位的思考与基于指向的思考这两种基于视觉原语的推理范式整合到一个统一模型中。我们利用这些专家模型对数据池执行 rollout 以生成 RFT 数据。应用前述难度分类标准，我们保留所有归类为"中等"的样本，并随机抽取 5% 的"简单"数据（以防止在过于简单的场景中出现灾难性遗忘<span class="note-ref" data-note="note-18">18</span>）。利用这一更大且更多样的 RFT 数据集，我们从基础预训练模型初始化，训练一个增强的 SFT 模型。我们的 RFT 训练配置与 SFT 冷启动阶段保持一致（包括训练超参数和初始检查点），唯一的区别在于更新了训练数据混合比例。经过此流程，我们获得统一模型 F。</p>
+<hr>
+<h4 id="section-2-5-4">2.5.4 在线策略蒸馏</h4>
+<p id="p-60">虽然 RFT 模型 F 相比冷启动模型 FTwG 和 FTwP 在各自领域取得了显著提升，但与专家模型 ETwG 和 ETwP 相比仍存在明显的性能差距。为弥合这一差距，我们遵循 [3] 并采用在线策略蒸馏 (OPD)<span class="note-ref" data-note="note-19">19</span>，将专家模型的能力有效整合到单一统一模型中。该蒸馏过程通过让学生模型基于自身生成的轨迹学习教师模型的输出分布来实现。形式化地，给定一组 N 个专家模型 {$\pi_{E1}, \pi_{E2}, ..., \pi_{EN}$}，OPD 目标函数定义为：</p>
+<p id="p-61">$$L_{OPD}(\theta) = \sum_{i=1}^{N} w_i \cdot D_{KL}(\pi_\theta \| \pi_{Ei}), \quad (2)$$</p>
+<p id="p-62">其中 $w_i$ 表示分配给每个专家模型的权重，$D_{KL}$ 表示反向 Kullback-Leibler (KL) 散度<span class="note-ref" data-note="note-20">20</span>损失，$\pi_\theta$ 表示学生模型。我们在 OPD 实现中采用全词表 logit 蒸馏。在实践中，我们使用两个教师模型，包括 ETwG 和 ETwP。</p>
+<h2 id="section-3">3. 实验</h2>
+<h3 id="section-3-1">3.1 实现细节</h3>
+<p id="p-63">我们的模型使用 HAI-LLM [7] 进行训练和评估，这是一个基于 PyTorch 构建的轻量级高效分布式训练框架。在预训练阶段，我们采用 64K 的序列长度和 FP8 精度；在后训练阶段，序列长度扩展至 256K。为了最大化领域专家模型的性能，我们在专项 SFT 和专项 RL 阶段使用 FP8 精度，随后在统一 RFT 和 OPD 阶段应用 FP4 (MXFP4) 量化。</p>
+<h3 id="section-3-2">3.2 评估设置</h3>
+<p id="p-64">我们的评估框架整合了广泛采用的公开基准测试与精心策划的内部测试套件。公开基准测试对于标准化比较至关重要，但其受限的评估维度往往无法全面捕捉模型的能力，例如视觉原语思维。为弥补这一不足，我们的内部套件引入了更多样且更具挑战性的评估维度，作为公开数据集的重要补充。</p>
+<p id="p-65"><strong>公开基准测试。</strong> 为评估计数能力，我们使用两个广泛采用的计数基准测试，包括 CountQA [30] 和 Pixmo-Count [4]。我们遵循每个数据集的标准评估协议，对 Pixmo-Count 使用官方测试集划分。为评估空间推理和通用 VQA，我们使用 SpatialMQA [20]、CV-Bench [31]、EmbSpatial [5]、OmniSpatial [11] 和 MIHBench [16] 等基准测试。</p>
+<p id="p-66"><strong>内部基准测试。</strong> 为更细致地评估模型通过"视觉原语思维"解决任务的能力，我们策划了一套量身定制的内部基准测试套件，涵盖三个关键维度：细粒度计数、多跳空间推理和拓扑推理。</p>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page17_fig1.png" alt="Table 1">
+  <figcaption><strong>表 1：</strong> 与前沿模型的比较。为确保公平比较，我们使用统一的提示集通过各自的 API 评估所有模型。最佳结果以粗体标注，次佳结果以下划线标注。</figcaption>
+</div>
+<h3 id="section-3-3">3.3 与前沿模型的比较</h3>
+<p id="p-67">为确保公平比较，我们在所有模型中采用统一的评估协议。鉴于一些早期公开基准测试包含低分辨率图像，我们应用预处理步骤以确保数据质量。具体而言，任何总像素数低于 640,000 的图像将被放大以达到该像素阈值，同时严格保持原始宽高比。对于支持可配置推理或思考预算的前沿模型（例如 GPT 和 Gemini-3-Flash），我们在所有评估中统一将思考预算设为低，以确保公平且一致的比较。对于所有其他基准测试，我们遵循官方评估协议和指标。结果如表 1 所示。得益于视觉原语思维的能力，我们的模型在这些任务上以出色的 token 效率取得了具有竞争力的性能。值得注意的是，所有前沿模型在拓扑推理任务上均表现不佳，表明多模态大语言模型的推理能力仍有很大的提升空间。</p>
+<hr>
+<h3 id="section-3-4">3.4 定性结果</h3>
+<h4 id="section-3-4-1">3.4.1 边界框作为视觉原语</h4>
+<p id="p-68">如图 7 至图 9 所示，我们的模型通过基于定位的思考在粗粒度和细粒度计数任务上表现出色，同时展现出涌现的能力协同效应。例如，模型能够整合世界知识进行视觉问答，执行反事实推理，并提供带有空间坐标的实用建议以适应用户的日常需求。尽管我们关于视觉原语的训练后数据不包含任何中文语料，但模型能够用中文进行思考和回答，这得益于基础模型继承的多语言能力。</p>
+<h4 id="section-3-4-2">3.4.2 点作为视觉原语</h4>
+<p id="p-69">如图 10 所示，我们的模型展示了通过基于指向的思考进行拓扑推理的能力，能够为迷宫生成逐步探索轨迹，为路径追踪生成序列跟踪轨迹。在域内实例上，模型能够识别并跟随路径，这是通过冷启动数据缓解和专项 RL 过程中的奖励机制所强化的。</p>
+<div class="figure-container">
+  <img src="raw/figures/page19_fig1.png" alt="Figure 7">
+  <figcaption><strong>图 7：</strong> 基于定位的思考展示。示例包括细粒度计数和反常识视觉问答。建议在屏幕上放大查看。</figcaption>
+</div>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page20_fig1.png" alt="Figure 8">
+  <figcaption><strong>图 8：</strong> 基于定位的思考展示。示例包括基于世界知识的问答和寻求实用建议。建议在屏幕上放大查看。</figcaption>
+</div>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page21_fig1.png" alt="Figure 9">
+  <figcaption><strong>图 9：</strong> 基于定位的思考展示。示例包括图片中的幽默理解、密室逃脱游戏指导和计数。建议在屏幕上放大查看。</figcaption>
+</div>
+<hr>
+<div class="figure-container">
+  <img src="raw/figures/page22_fig1.png" alt="Figure 10">
+  <figcaption><strong>图 10：</strong> 基于指向的思考展示。示例包括迷宫导航和路径追踪。建议在屏幕上放大查看。</figcaption>
+</div>
+<hr>
+<h2 id="section-4">4. 局限性</h2>
+<p id="p-70">尽管取得了这些有希望的成果，我们当前的工作仍存在一定局限性。首先，受输入分辨率限制，模型在细粒度场景下的性能仍不够理想，导致视觉原语的输出偶尔不够精确。这一问题有望通过将我们的框架与针对"感知鸿沟"的现有方法相结合来实现互补收益。其次，当前的"视觉原语思维"能力依赖显式触发词来激活。未来，我们的目标是使模型能够根据具体上下文自主决定是否调用该机制。第三，利用点作为视觉原语来解决复杂拓扑推理问题仍然是一项艰巨的挑战，我们当前的模型在跨场景泛化方面表现有限。探索拓宽该技术的适用性和鲁棒性，构成未来研究的重要方向。</p>
+<h2 id="section-5">5. 结论</h2>
+<p id="p-71">为解决多模态大语言模型 (MLLM) 在复杂推理中固有的"参考鸿沟"，我们提出了"视觉原语思维"，一种新颖的推理框架。我们超越了单纯增加感知分辨率的传统依赖，将空间标记——如点和边界框——提升为"最小思维单元"，并将其直接交织到模型的思考过程中。这一机制赋予模型"边推理边指向"的能力，将抽象语言概念精确锚定到物理图像坐标上。此外，借助高效的视觉 token 压缩架构，我们的模型在空间推理、视觉问答和拓扑推理等高难度任务上取得了与前沿模型相当的性能，同时显著减少了图像 token 消耗。我们的工作表明，通向 System-2 多模态智能的路径不仅在于"看到更多像素"，更在于构建语言与视觉之间精确、无歧义的指代桥梁。</p>
+<hr>
+<h2 id="section-references">参考文献</h2>
+<p id="p-72">[1] M. Acharya, K. Kafle, and C. Kanan. Tallyqa: Answering complex counting questions. In Proceedings of the AAAI conference on artificial intelligence, volume 33, pages 8076–8084, 2019.</p>
+<p id="p-73">[2] M. Amgad, L. A. Atteya, H. Hussein, K. H. Mohammed, E. Hafiz, M. A. Elsebaie, A. M. Alhusseiny, M. A. AlMoslemany, A. M. Elmatboly, P. A. Pappalardo, et al. Nucls: A scalable crowdsourcing approach and dataset for nucleus classification and segmentation in breast cancer. GigaScience, 11:giac037, 2022.</p>
+<p id="p-74">[3] DeepSeek-AI. Deepseek-v4: Towards highly efficient million-token context intelligence, 2026.</p>
+<p id="p-75">[4] M. Deitke, C. Clark, S. Lee, R. Tripathi, Y. Yang, J. S. Park, M. Salehi, N. Muennighoff, K. Lo, L. Soldaini, et al. Molmo and pixmo: Open weights and open data for state-of-the-art vision-language models. In Proceedings of the Computer Vision and Pattern Recognition Conference, pages 91–104, 2025.</p>
+<p id="p-76">[5] M. Du, B. Wu, Z. Li, X.-J. Huang, and Z. Wei. Embspatial-bench: Benchmarking spatial understanding for embodied tasks with large vision-language models. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers), pages 346–355, 2024.</p>
+<p id="p-77">[6] Y. Fan, X. He, D. Yang, K. Zheng, C.-C. Kuo, Y. Zheng, S. J. Narayanaraju, X. Guan, and X. E. Wang. Grit: Teaching mllms to think with images. arXiv preprint arXiv:2505.15879, 2025.</p>
+<p id="p-78">[7] High-flyer. Hai-llm: Efficient and lightweight training tool for large models, 2023. URL https://www.high-flyer.cn/en/blog/hai-llm.</p>
+<p id="p-79">[8] J. Hong, C. Zhao, C. Zhu, W. Lu, G. Xu, and X. Yu. Deepeyesv2: Toward agentic multimodal model. arXiv preprint arXiv:2511.05271, 2025.</p>
+<p id="p-80">[9] M.-R. Hsieh, Y.-L. Lin, and W. H. Hsu. Drone-based object counting by spatially regularized regional proposal network. In Proceedings of the IEEE international conference on computer vision, pages 4145–4153, 2017.</p>
+<p id="p-81">[10] D. A. Hudson and C. D. Manning. Gqa: A new dataset for real-world visual reasoning and compositional question answering. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 6700–6709, 2019.</p>
+<p id="p-82">[11] M. Jia, Z. Qi, S. Zhang, W. Zhang, X. Yu, J. He, H. Wang, and L. Yi. Omnispatial: Towards comprehensive spatial reasoning benchmark for vision language models. arXiv preprint arXiv:2506.03135, 2025.</p>
+<p id="p-83">[12] C. Jiang, Y. Heng, W. Ye, H. Yang, H. Xu, M. Yan, J. Zhang, F. Huang, and S. Zhang. Vlm-r3: Region recognition, reasoning, and refinement for enhanced multimodal chain-of-thought. arXiv preprint arXiv:2505.16192, 2025.</p>
+<p id="p-84">[13] J. Johnson, B. Hariharan, L. Van Der Maaten, L. Fei-Fei, C. Lawrence Zitnick, and R. Girshick. Clevr: A diagnostic dataset for compositional language and elementary visual reasoning. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 2901–2910, 2017.</p>
+<p id="p-85">[14] A. Kuznetsova, H. Rom, N. Alldrin, J. Uijlings, I. Krasin, J. Pont-Tuset, S. Kamali, S. Popov, M. Malloci, A. Kolesnikov, T. Duerig, and V. Ferrari. The open images dataset v4: Unified image classification, object detection, and visual relationship detection at scale. IJCV, 2020.</p>
+<p id="p-86">[15] A. Kuznetsova, H. Rom, N. Alldrin, J. Uijlings, I. Krasin, J. Pont-Tuset, S. Kamali, S. Popov, M. Malloci, A. Kolesnikov, et al. The open images dataset v4: Unified image classification, object detection, and visual relationship detection at scale. International journal of computer vision, 128(7):1956–1981, 2020.</p>
+<p id="p-87">[16] J. Li, M. Wu, Z. Jin, H. Chen, J. Ji, X. Sun, L. Cao, and R. Ji. Mihbench: Benchmarking and mitigating multi-image hallucinations in multimodal large language models. In Proceedings of the 33rd ACM International Conference on Multimedia, pages 3143–3152, 2025.</p>
+<p id="p-88">[17] T.-Y. Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan, P. Dollár, and C. L. Zitnick. Microsoft coco: Common objects in context. In European conference on computer vision, pages 740–755. Springer, 2014.</p>
+<p id="p-89">[18] H. Liu, C. Li, Y. Li, and Y. J. Lee. Improved baselines with visual instruction tuning, 2023.</p>
+<p id="p-90">[19] H. Liu, C. Li, Q. Wu, and Y. J. Lee. Visual instruction tuning. In NeurIPS, 2023.</p>
+<p id="p-91">[20] J. Liu, Z. Liu, Z. Cen, Y. Zhou, Y. Zou, W. Zhang, H. Jiang, and T. Ruan. Can multimodal large language models understand spatial relations? In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 620–632, 2025.</p>
+<p id="p-92">[21] Y. Man, D.-A. Huang, G. Liu, S. Sheng, S. Liu, L.-Y. Gui, J. Kautz, Y.-X. Wang, and Z. Yu. Argus: Vision-centric reasoning with grounded chain-of-thought. 2025.</p>
+<p id="p-93">[22] A. Mondal, S. Nag, X. Zhu, and A. Dutta. Omnicount: Multi-label object counting with semantic-geometric priors. In Proceedings of the AAAI Conference on Artificial Intelligence, volume 39, pages 19537–19545, 2025.</p>
+<p id="p-94">[23] D. T. O'Brien. Thinking, fast and slow by daniel kahneman. 2012.</p>
+<p id="p-95">[24] OpenAI. Introducing o3 and o4-mini. https://openai.com/index/introducing-o3-and-o4-mini/, 2025.</p>
+<p id="p-96">[25] Z. Peng, W. Wang, L. Dong, Y. Hao, S. Huang, S. Ma, and F. Wei. Kosmos-2: Grounding multimodal large language models to the world. ArXiv, abs/2306.14824, 2023.</p>
+<p id="p-97">[26] J. Qi, M. Ding, W. Wang, Y. Bai, Q. Lv, W. Hong, B. Xu, L. Hou, J. Li, Y. Dong, et al. Cogcom: A visual language model with chain-of-manipulations reasoning. arXiv preprint arXiv:2402.04236, 2024.</p>
+<p id="p-98">[27] H. Shao, S. Qian, H. Xiao, G. Song, Z. Zong, L. Wang, Y. Liu, and H. Li. Visual cot: Advancing multi-modal language models with a comprehensive dataset and benchmark for chain-of-thought reasoning. Advances in Neural Information Processing Systems, 37:8612–8642, 2024.</p>
+<p id="p-99">[28] S. Shao, Z. Zhao, B. Li, T. Xiao, G. Yu, X. Zhang, and J. Sun. Crowdhuman: A benchmark for detecting human in a crowd. arXiv preprint arXiv:1805.00123, 2018.</p>
+<p id="p-100">[29] S. Shao, Z. Li, T. Zhang, C. Peng, G. Yu, X. Zhang, J. Li, and J. Sun. Objects365: A large-scale, high-quality dataset for object detection. In Proceedings of the IEEE/CVF international conference on computer vision, pages 8430–8439, 2019.</p>
+<p id="p-101">[30] J. S. Tamarapalli, R. Grover, N. Pande, and S. Yerramilli. Countqa: How well do mllms count in the wild? arXiv preprint arXiv:2508.06585, 2025.</p>
+<p id="p-102">[31] S. Tong, E. Brown, P. Wu, S. Woo, M. Middepogu, S. C. Akula, J. Yang, S. Yang, A. Iyer, X. Pan, et al. Cambrian-1: A fully open, vision-centric exploration of multimodal llms. Advances in Neural Information Processing Systems, 37:87310–87356, 2024.</p>
+<p id="p-103">[32] H. Wang, X. Li, Z. Huang, A. Wang, J. Wang, T. Zhang, J. Zheng, S. Bai, Z. Kang, J. Feng, et al. Traceable evidence enhanced visual grounded reasoning: Evaluation and methodology. arXiv preprint arXiv:2507.07999, 2025.</p>
+<p id="p-104">[33] J. Wang, P. Zhang, T. Chu, Y. Cao, Y. Zhou, T. Wu, B. Wang, C. He, and D. Lin. V3det: Vast vocabulary visual detection dataset. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 19844–19854, 2023.</p>
+<p id="p-105">[34] J. Wang, Z. Kang, H. Wang, H. Jiang, J. Li, B. Wu, Y. Wang, J. Ran, X. Liang, C. Feng, et al. Vgr: Visual grounded reasoning. arXiv preprint arXiv:2506.11991, 2025.</p>
+<p id="p-106">[35] P. Zhu, L. Wen, D. Du, X. Bian, H. Fan, Q. Hu, and H. Ling. Detection and tracking meet drones challenge. IEEE transactions on pattern analysis and machine intelligence, 44(11):7380–7399, 2021.</p>
+<hr>
+  </main>
+
+  <!-- 右侧注解 -->
+  <aside class="sidebar-notes" id="notesSidebar">
+    <div class="sidebar-notes-header">💡 注解与延伸</div>
+    <div class="annotation-card" id="note-1">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          思维链 (Chain-of-Thought)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>让大语言模型在给出最终答案前，先输出一系列中间推理步骤的技术。例如解数学题时先写出推导过程，而非直接给答案。CoT 使模型能够展示"工作过程"，从而提升复杂任务的准确率。</p>
+        <p>本文的核心创新在于将 CoT 从纯语言空间扩展到视觉空间，让模型的推理过程不再只用文字，而是"边想边指"。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-2">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          感知鸿沟 (Perception Gap)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>指模型无法从图像中提取足够细粒度的视觉信息这一局限。传统方法通过提高输入分辨率和增加视觉标记数量来缓解。</p>
+        <p>区分"感知鸿沟"和"参考鸿沟"是理解本文动机的关键：前者关乎"看不清"，后者关乎"说不准"。本文侧重解决后者。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-3">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          参考鸿沟 (Reference Gap)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>自然语言在指代视觉空间中的具体对象时存在固有模糊性，无法提供精确、无歧义的指针。例如"左边第二个红球"在密集场景中可能指向多个不同目标。</p>
+        <p>这是本文识别出的核心瓶颈——模型不是"看不清"图像，而是无法用语言精确"指认"它所看到的对象，导致推理过程中失去对视觉实体的追踪。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-4">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          系统2思维 (System 2)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>来自 Daniel Kahneman 的双系统理论：系统1快速直觉，系统2慢速审慎，需要逐步推理。当前大模型的思维链推理试图模拟系统2的审慎过程。</p>
+        <p>本文的目标是构建更接近系统2的多模态智能——需要精确、逐步的空间推理，而非直觉式的猜测。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-5">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          压缩稀疏注意力 (CSA)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>一种注意力机制优化技术，将每 m 个视觉标记的键值对压缩为一个缓存条目，大幅减少内存和计算开销。本文模型在 756×756 图像上仅需 81 个 KV 缓存条目，总压缩比达 7056×。</p>
+        <p>CSA 是本文架构效率的基础，使紧凑模型也能处理长上下文视觉输入，是视觉原语思维框架能在有限资源下工作的关键保障。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-6">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          KV 缓存
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>Transformer 推理时缓存注意力计算中的键 (Key) 和值 (Value) 矩阵，避免对已处理标记的重复计算，是加速推理的核心机制。视觉标记越多，KV 缓存越大，推理开销越高。</p>
+        <p>本文通过 CSA 机制将 KV 缓存压缩 4 倍，在有限预算下实现了长上下文视觉推理，这也是模型能以极少标记达到前沿性能的原因。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-7">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          视觉 Transformer (ViT)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>将 Transformer 架构应用于计算机视觉的模型，将图像分割为固定大小的图块 (patch) 序列，像处理文本 token 一样处理图像。已成为视觉编码的标准方案。</p>
+        <p>本文使用从头训练的内部 ViT，支持任意分辨率输入，配合 3×3 空间标记压缩实现高效的视觉特征提取。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-8">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          混合专家模型 (MoE)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>一种模型架构策略，将多个"专家"子网络组合在一起，每次推理时只激活部分专家。本文模型有 284B 总参数，但每次推理仅激活 13B 参数。</p>
+        <p>MoE 架构使本文方法以较低的推理成本实现大模型级容量，是"小模型竞争大模型"这一结果的基础。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-9">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          边界框 (Bounding Box)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>用矩形框标注图像中目标位置的方式，通常表示为左上角和右下角坐标 (x1, y1, x2, y2)。是目标检测中最基础的空间表示方法。</p>
+        <p>本文将边界框从传统的"检测输出"提升为"视觉原语"——不仅用于标注结果，更作为模型推理过程中锚定思维的最小单元，让模型"边想边框"。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-10">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          数据污染 / 数据泄露
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>训练数据中意外包含了测试集或评估数据，导致模型在基准测试中的性能被高估，无法反映真实泛化能力。本文通过严格排除所有验证集和测试集划分来防范这一问题。</p>
+        <p>在构建大规模网络爬取数据时防止数据污染，是确保评估公平性和实验结果可信度的前提。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-11">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          冷启动 (Cold-Start)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>后训练阶段需要一小批高质量种子数据来引导模型学习新的行为模式。数据量虽小（各任务仅数千到数十万样本），但精度要求极高，需要明确监督目标和自动验证机制。</p>
+        <p>冷启动数据的质量直接决定后续强化学习的效果——好的起点让 RL 训练事半功倍，差的起点则可能导致模型无法收敛到正确行为。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-12">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          CLEVR 数据集
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>一个合成生成的视觉推理基准数据集，包含各种几何体（球体、立方体、圆柱体），支持可控的场景生成和程序化真值标注。其优势在于可以无限量生成精确标注的复杂推理样本。</p>
+        <p>本文利用 CLEVR 工具链生成多跳推理数据，将 3D 目标坐标投影为 2D 边界框，为空间推理提供高质量的冷启动训练样本。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-13">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          深度优先搜索 (DFS)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>一种图遍历算法：沿着一条路径尽可能深入探索，遇到死路再回溯尝试其他分支。天然适合迷宫求解，因为它系统性地探索每一条可能路径。</p>
+        <p>本文将 DFS 的探索过程转化为视觉原语序列——每个探索步骤通过坐标点锚定到图像上，让模型模拟人类"手指追踪"迷宫路径的认知过程。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-14">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          贝塞尔曲线
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>由控制点定义的参数曲线，广泛应用于计算机图形学中。通过调整控制点位置，可以灵活生成各种平滑曲线形状。</p>
+        <p>本文用多条贝塞尔曲线生成纠缠的线条图像，在路径追踪任务中，模型需要在曲线交叉处判断曲率连续性来追踪正确路径，直接检验视觉原语推理是否被内化。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-15">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          组相对策略优化 (GRPO)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>一种强化学习算法，通过对比同组内多个采样输出的相对表现来优化策略，无需单独训练价值模型 (critic)，比 PPO 更高效。最早由 DeepSeek 提出。</p>
+        <p>GRPO 是本文后训练流水线的核心算法，负责将冷启动阶段学到的基础能力进一步强化，同时保持了训练效率。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-16">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          奖励模型 (Reward Model)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>在强化学习中用于评估模型输出质量的模块，为策略优化提供监督信号。本文针对每个任务设计了多个专用 RM，分别从格式、质量和准确率三个维度提供同步监督。</p>
+        <p>多维度奖励设计是本文 RL 训练的关键创新——不只是简单的对错判断，而是细粒度的分项评估，确保模型在每个方面都得到有效引导。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-17">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          生成式奖励模型 (GRM)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>基于 LLM 的奖励模型，通过理解语义来评估输出质量，而非依赖简单的规则匹配。能够判断思维过程的逻辑一致性、语义合理性等深层质量维度。</p>
+        <p>本文用 GRM 从冗余检测、一致性验证、奖励欺骗防范等多个维度提供质量评分，输出三档分数 (0.0, 0.5, 1.0) 并附理由。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-18">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          灾难性遗忘 (Catastrophic Forgetting)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>神经网络在学习新任务时丢失已学旧知识的现象。当模型参数朝新任务方向更新时，之前学到的知识可能被覆盖，导致旧任务性能显著下降。</p>
+        <p>本文在统一 RFT 阶段通过保留 5% 的"简单"数据来防止模型遗忘基础能力，是多任务学习中必须解决的核心问题。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-19">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          在线策略蒸馏 (On-Policy Distillation)
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>将多个专家模型的知识融合到单一学生模型的技术。学生模型基于自身生成的轨迹（而非固定数据集）学习教师模型的输出分布，保持训练的在线特性。</p>
+        <p>本文用此方法将边界框专家 (ETwG) 和点专家 (ETwP) 合并为一个统一模型，使单个模型同时具备两种视觉原语推理能力。</p>
+      </div>
+    </div>
+    <div class="annotation-card" id="note-20">
+      <div class="annotation-card-header" onclick="toggleAnnotation(this.parentElement)">
+        <span class="annotation-card-title">
+          <span class="annotation-card-icon">📌</span>
+          KL 散度
+        </span>
+        <span class="annotation-card-toggle">▼</span>
+      </div>
+      <div class="annotation-card-body">
+        <p>Kullback-Leibler 散度，衡量两个概率分布之间差异的非对称指标。在知识蒸馏中用作损失函数，衡量学生模型输出分布与教师模型的偏差。</p>
+        <p>本文使用反向 KL 散度进行在线策略蒸馏，通过最小化学生与教师之间的分布差异，确保统一模型有效吸收两个专家的知识。</p>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+ <script>
+  // 主题切换
+  (function() {
+    var saved = localStorage.getItem('paper-theme');
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+
+  function toggleTheme() {
+    var html = document.documentElement;
+    var isDark = html.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      html.removeAttribute('data-theme');
+      localStorage.setItem('paper-theme', 'light');
+    } else {
+      html.setAttribute('data-theme', 'dark');
+      localStorage.setItem('paper-theme', 'dark');
+    }
+  }
+
+  // KaTeX 自动渲染
+  document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(document.getElementById("mainContent"), {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\[", right: "\\]", display: true},
+        {left: "\\(", right: "\\)", display: false}
+      ],
+      throwOnError: false
+    });
+  });
+
+  // 注解卡片折叠/展开
+  function toggleAnnotation(card) {
+    card.classList.toggle("expanded");
+  }
+
+  // 点击正文中的注解标记，滚动到对应注解并展开
+  document.querySelectorAll(".note-ref").forEach(function(ref) {
+    ref.addEventListener("click", function(e) {
+      e.stopPropagation();
+      var targetId = this.getAttribute("data-note");
+      var card = document.getElementById(targetId);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.classList.add("expanded");
+        // 高亮闪烁
+        card.style.boxShadow = "0 0 0 3px var(--color-accent)";
+        setTimeout(function() {
+          card.style.boxShadow = "";
+        }, 1500);
+      }
+      // 移动端显示注解栏
+      var notesSidebar = document.getElementById("notesSidebar");
+      if (window.innerWidth <= 1100) {
+        notesSidebar.classList.add("visible");
+      }
+    });
+  });
+
+  // 响应式切换
+  function toggleToc() {
+    document.getElementById("tocSidebar").classList.toggle("visible");
+  }
+
+  function toggleNotes() {
+    document.getElementById("notesSidebar").classList.toggle("visible");
+  }
+
+  // TOC 高亮当前位置
+  var headings = document.querySelectorAll("#mainContent h2, #mainContent h3");
+  var tocLinks = document.querySelectorAll("#tocList a");
+
+  function updateActiveLink() {
+    var scrollPos = window.scrollY + 120;
+    var current = null;
+    headings.forEach(function(h) {
+      if (h.offsetTop <= scrollPos) {
+        current = h;
+      }
+    });
+    if (current) {
+      var id = current.getAttribute("id");
+      tocLinks.forEach(function(a) {
+        a.classList.remove("active");
+        if (a.getAttribute("href") === "#" + id) {
+          a.classList.add("active");
+        }
+      });
+    }
+  }
+
+  window.addEventListener("scroll", updateActiveLink);
+
+  // 平滑滚动到锚点
+  tocLinks.forEach(function(a) {
+    a.addEventListener("click", function(e) {
+      e.preventDefault();
+      var target = document.querySelector(this.getAttribute("href"));
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      // 移动端关闭目录
+      if (window.innerWidth <= 768) {
+        document.getElementById("tocSidebar").classList.remove("visible");
+      }
+    });
+  });
+
+  // 键盘快捷键
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "t" && e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      toggleToc();
+    }
+    if (e.key === "n" && e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      toggleNotes();
+    }
+  });
+</script>
+
+</body>
+</html>
